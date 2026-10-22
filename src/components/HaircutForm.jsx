@@ -42,8 +42,6 @@ function getRoundedCurrentDateTime() {
 
 export function HaircutForm({ onSaveSuccess }) {
   const [services, setServices] = useState([]);
-  
-  // Guardamos a seleção no formato: { [serviceId]: valorCobrado }
   const [selectedItems, setSelectedItems] = useState({});
   const [activeComboMsg, setActiveComboMsg] = useState('');
   
@@ -52,28 +50,30 @@ export function HaircutForm({ onSaveSuccess }) {
   const [savedToast, setSavedToast] = useState(false);
 
   useEffect(() => {
-    async function loadServices() {
+    async function syncAndLoadServices() {
       try {
         let list = await db.services.toArray();
-        if (list.length === 0) {
+        const isMatchingNew = list.length === 9 && list.some(s => s.name === 'Cabelo');
+        
+        if (!isMatchingNew) {
+          await db.services.clear();
           await db.services.bulkPut(DEFAULT_SERVICES);
           list = DEFAULT_SERVICES;
         }
+
         setServices(list);
         
-        // Seleção inicial padrão: Cabelo (€20)
-        const initialCabelo = list.find(s => s.name === 'Cabelo') || list[0];
-        if (initialCabelo) {
-          setSelectedItems({ [initialCabelo.id]: initialCabelo.price });
+        const cabeloItem = list.find(s => s.name === 'Cabelo') || list[0];
+        if (cabeloItem) {
+          setSelectedItems({ [cabeloItem.id]: cabeloItem.price });
         }
       } catch (err) {
-        console.error('Erro ao carregar serviços:', err);
+        console.error('Erro ao sincronizar serviços:', err);
       }
     }
-    loadServices();
+    syncAndLoadServices();
   }, []);
 
-  // Lógica de alternar seleção (Toggle) + Aplicação de Promoções Automáticas
   const handleToggleService = (service) => {
     const isSelected = selectedItems.hasOwnProperty(service.id);
     let updated = { ...selectedItems };
@@ -84,7 +84,6 @@ export function HaircutForm({ onSaveSuccess }) {
       updated[service.id] = service.price;
     }
 
-    // Identificação dos IDs dos serviços para combos
     const cabeloObj = services.find(s => s.name === 'Cabelo');
     const rapadoObj = services.find(s => s.name === 'Rapado');
     const barbaObj = services.find(s => s.name === 'Barba');
@@ -95,13 +94,11 @@ export function HaircutForm({ onSaveSuccess }) {
 
     let comboBanner = '';
 
-    // COMBO 1: Cabelo + Barba (€30 em vez de €38)
     if (hasCabelo && hasBarba) {
       updated[cabeloObj.id] = 16;
       updated[barbaObj.id] = 14;
       comboBanner = 'Promoção Cabelo + Barba ativada! (€30)';
     } 
-    // COMBO 2: Rapado + Barba (€25 em vez de €33)
     else if (hasRapado && hasBarba) {
       updated[rapadoObj.id] = 11;
       updated[barbaObj.id] = 14;
@@ -112,7 +109,6 @@ export function HaircutForm({ onSaveSuccess }) {
     setActiveComboMsg(comboBanner);
   };
 
-  // Alteração de valor pelo slider individual de cada serviço
   const handlePriceChange = (serviceId, newPrice) => {
     setSelectedItems(prev => ({
       ...prev,
@@ -127,7 +123,6 @@ export function HaircutForm({ onSaveSuccess }) {
     setDate((new Date(currentDate.getTime() - tzOffset)).toISOString().slice(0, 16));
   };
 
-  // Cálculo do valor total
   const totalPrice = Object.values(selectedItems).reduce((sum, val) => sum + val, 0);
 
   const handleSubmit = async (e) => {
@@ -138,7 +133,6 @@ export function HaircutForm({ onSaveSuccess }) {
       return alert('Selecione pelo menos um serviço!');
     }
 
-    // Nomes dos serviços selecionados separados por vírgula
     const selectedNames = services
       .filter(s => selectedItems.hasOwnProperty(s.id))
       .map(s => s.name)
@@ -174,7 +168,7 @@ export function HaircutForm({ onSaveSuccess }) {
           <span style={styles.subtitle}>Selecione um ou mais serviços</span>
         </div>
 
-        {/* 1º CAMPO: DATA E HORA (COM PASSOS DE 10 MIN) */}
+        {/* 1º CAMPO: DATA E HORA */}
         <div style={styles.sectionCard}>
           <label style={styles.label}>
             <Clock size={16} color="#E5A93C" /> 1. Data e Hora (passos de 10 min)
@@ -201,21 +195,20 @@ export function HaircutForm({ onSaveSuccess }) {
             <Tag size={16} color="#E5A93C" /> 2. Serviços Executados (Grade 3x3)
           </label>
 
-          {/* Banner de Promoção Ativa */}
           {activeComboMsg && (
             <div style={styles.comboBanner}>
               <Sparkles size={16} color="#E5A93C" /> {activeComboMsg}
             </div>
           )}
 
-          {/* GRADE 3 COLUNAS X 3 LINHAS */}
           <div style={styles.grid3x3}>
             {services.slice(0, 9).map((service) => {
               const IconComponent = iconMap[service.icon_name] || Scissors;
               const isSelected = selectedItems.hasOwnProperty(service.id);
 
               return (
-                <div
+                <button
+                  type="button"
                   key={service.id}
                   onClick={() => handleToggleService(service)}
                   style={{
@@ -232,7 +225,6 @@ export function HaircutForm({ onSaveSuccess }) {
                   }}>
                     <IconComponent size={20} />
                   </div>
-                  
                   <span style={{
                     ...styles.cardName,
                     color: isSelected ? '#FFF' : '#A1A1AA',
@@ -240,34 +232,40 @@ export function HaircutForm({ onSaveSuccess }) {
                   }}>
                     {service.name}
                   </span>
-                  
                   <span style={styles.cardPrice}>
                     € {isSelected ? selectedItems[service.id] : service.price}
                   </span>
-
-                  {/* SLIDER INJETADO DIRETAMENTE NO CARD QUANDO SELECIONADO */}
-                  {isSelected && (
-                    <div 
-                      style={styles.cardSliderBox}
-                      onClick={(e) => e.stopPropagation()} // Impede que o clique no slider desmarque o cartão
-                    >
-                      <input 
-                        type="range" 
-                        min="0" 
-                        max="120" 
-                        step="1" 
-                        value={selectedItems[service.id]} 
-                        onChange={(e) => handlePriceChange(service.id, e.target.value)}
-                        style={styles.cardSliderInput}
-                      />
-                    </div>
-                  )}
-                </div>
+                </button>
               );
             })}
           </div>
 
-          {/* TOTALIZADOR */}
+          {/* SLIDERS DE AJUSTE INDIVIDUAL (ABAIXO DA GRADE) */}
+          {Object.keys(selectedItems).length > 0 && (
+            <div style={styles.priceSlidersBox}>
+              <span style={styles.sliderBoxTitle}>Ajuste de valor por serviço:</span>
+              {services
+                .filter(s => selectedItems.hasOwnProperty(s.id))
+                .map((service) => (
+                  <div key={service.id} style={styles.singleSliderRow}>
+                    <div style={styles.sliderHeader}>
+                      <span style={styles.sliderServiceName}>{service.name}</span>
+                      <span style={styles.sliderValueText}>€ {selectedItems[service.id]}</span>
+                    </div>
+                    <input 
+                      type="range" 
+                      min="0" 
+                      max="120" 
+                      step="1" 
+                      value={selectedItems[service.id]} 
+                      onChange={(e) => handlePriceChange(service.id, e.target.value)}
+                      style={styles.sliderInput}
+                    />
+                  </div>
+                ))}
+            </div>
+          )}
+
           <div style={styles.totalBox}>
             <span>TOTAL DO ATENDIMENTO:</span>
             <span style={styles.totalPriceText}>€ {totalPrice}</span>
@@ -288,7 +286,6 @@ export function HaircutForm({ onSaveSuccess }) {
           />
         </div>
 
-        {/* BOTÃO CONFIRMAR */}
         <button type="submit" style={styles.submitBtn}>
           <Check size={22} /> Confirmar Atendimento (€ {totalPrice})
         </button>
@@ -403,12 +400,11 @@ const styles = {
     gridTemplateColumns: 'repeat(3, 1fr)',
     gap: '10px',
   },
-  // O Card agora é uma <div> para permitir o slider aninhado corretamente
   card: {
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
-    padding: '10px 4px 12px 4px',
+    padding: '10px 4px',
     borderRadius: '10px',
     border: '1.5px solid #2A2A36',
     cursor: 'pointer',
@@ -434,19 +430,44 @@ const styles = {
     color: '#E5A93C',
     fontWeight: '700',
   },
-  // Estilos novos para o slider dentro do card
-  cardSliderBox: {
-    width: '85%',
-    marginTop: '8px',
+  priceSlidersBox: {
+    backgroundColor: '#121214',
+    padding: '12px',
+    borderRadius: '10px',
+    border: '1px solid #2A2A36',
     display: 'flex',
     flexDirection: 'column',
-    alignItems: 'center',
+    gap: '12px',
+    marginTop: '4px',
   },
-  cardSliderInput: {
+  sliderBoxTitle: {
+    fontSize: '12px',
+    color: '#A1A1AA',
+    fontWeight: '500',
+  },
+  singleSliderRow: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '8px',
+  },
+  sliderHeader: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    fontSize: '14px',
+  },
+  sliderServiceName: {
+    color: '#FFF',
+    fontWeight: '600',
+  },
+  sliderValueText: {
+    color: '#E5A93C',
+    fontWeight: '700',
+  },
+  sliderInput: {
     width: '100%',
     accentColor: '#E5A93C',
     cursor: 'pointer',
-    height: '4px',
+    height: '6px',
   },
   totalBox: {
     display: 'flex',
