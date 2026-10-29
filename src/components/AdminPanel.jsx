@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { db } from '../services/db';
 import { 
   ShieldAlert, Share2, Database, CheckCircle, 
@@ -8,25 +9,28 @@ import {
 } from 'lucide-react';
 
 const AVAILABLE_ICONS = [
-  { name: 'Scissors', label: 'Tesoura', Icon: Scissors },
-  { name: 'User', label: 'Pessoa', Icon: User },
-  { name: 'Zap', label: 'Raio/Rapado', Icon: Zap },
-  { name: 'Smile', label: 'Sorriso/Barba', Icon: Smile },
-  { name: 'Sparkles', label: 'Brilho', Icon: Sparkles },
-  { name: 'Palette', label: 'Paleta/Pintura', Icon: Palette },
-  { name: 'Sun', label: 'Sol/Descoloração', Icon: Sun },
-  { name: 'Waves', label: 'Ondas/Permanente', Icon: Waves },
-  { name: 'Coins', label: 'Moedas/Propina', Icon: Coins },
-  { name: 'Star', label: 'Estrela', Icon: Star },
-  { name: 'Heart', label: 'Coração', Icon: Heart },
-  { name: 'Tag', label: 'Etiqueta', Icon: Tag },
+  { name: 'Scissors', Icon: Scissors },
+  { name: 'User', Icon: User },
+  { name: 'Zap', Icon: Zap },
+  { name: 'Smile', Icon: Smile },
+  { name: 'Sparkles', Icon: Sparkles },
+  { name: 'Palette', Icon: Palette },
+  { name: 'Sun', Icon: Sun },
+  { name: 'Waves', Icon: Waves },
+  { name: 'Coins', Icon: Coins },
+  { name: 'Star', Icon: Star },
+  { name: 'Heart', Icon: Heart },
+  { name: 'Tag', Icon: Tag },
 ];
 
 export function AdminPanel() {
+  const { t } = useTranslation();
   const [services, setServices] = useState([]);
   const [isExporting, setIsExporting] = useState(false);
-  const [statusMessage, setStatusMessage] = useState('');
-  const [errorMessage, setErrorMessage] = useState('');
+  
+  // Guardamos as CHAVES de tradução no estado para re-traduzir automaticamente
+  const [statusKey, setStatusKey] = useState('');
+  const [errorKey, setErrorKey] = useState('');
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
@@ -47,8 +51,8 @@ export function AdminPanel() {
 
   // EXPORTAR BACKUP
   const handleBackup = async () => {
-    setStatusMessage('');
-    setErrorMessage('');
+    setStatusKey('');
+    setErrorKey('');
     setIsExporting(true);
 
     try {
@@ -74,10 +78,10 @@ export function AdminPanel() {
         try {
           await navigator.share({
             title: 'Backup Barbearia',
-            text: `Backup dos dados da barbearia (${dataFormatada})`,
+            text: `Backup (${dataFormatada})`,
             files: [file]
           });
-          setStatusMessage('Backup enviado com sucesso!');
+          setStatusKey('admin.backup_success');
           setIsExporting(false);
           return;
         } catch (shareErr) {
@@ -94,10 +98,10 @@ export function AdminPanel() {
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
 
-      setStatusMessage('Arquivo baixado na pasta "Downloads". Envie-o pelo WhatsApp.');
+      setStatusKey('admin.backup_downloaded');
     } catch (error) {
       console.error("Erro no backup:", error);
-      setErrorMessage('Erro ao acessar o banco para backup.');
+      setErrorKey('form.db_error');
     } finally {
       setIsExporting(false);
     }
@@ -108,8 +112,8 @@ export function AdminPanel() {
     const file = event.target.files[0];
     if (!file) return;
 
-    setStatusMessage('');
-    setErrorMessage('');
+    setStatusKey('');
+    setErrorKey('');
 
     const reader = new FileReader();
     reader.onload = async (e) => {
@@ -117,17 +121,16 @@ export function AdminPanel() {
         const content = e.target.result;
         const data = JSON.parse(content);
 
-        // Validação do formato do backup
         if (!data || !Array.isArray(data.services) || !Array.isArray(data.appointments)) {
-          setErrorMessage('Arquivo de backup inválido! O JSON precisa conter as tabelas "services" e "appointments".');
+          setErrorKey('admin.restore_invalid');
           return;
         }
 
         const confirmRestore = window.confirm(
-          `Atenção! A restauração irá substituir os dados atuais por:\n\n` +
-          `- ${data.services.length} serviços\n` +
-          `- ${data.appointments.length} atendimentos registrados\n\n` +
-          `Deseja realmente continuar?`
+          t('admin.restore_confirm_title', {
+            services: data.services.length,
+            appointments: data.appointments.length
+          })
         );
 
         if (!confirmRestore) {
@@ -135,7 +138,6 @@ export function AdminPanel() {
           return;
         }
 
-        // Transação para substituir os dados de forma atômica no Dexie
         await db.transaction('rw', db.services, db.appointments, async () => {
           await db.services.clear();
           await db.appointments.clear();
@@ -148,12 +150,12 @@ export function AdminPanel() {
           }
         });
 
-        setStatusMessage('Banco de dados restaurado com sucesso!');
+        setStatusKey('admin.restore_success');
         loadServices();
 
       } catch (err) {
         console.error('Erro ao ler arquivo de backup:', err);
-        setErrorMessage('Erro ao processar o arquivo JSON. Verifique se o arquivo está corrompido.');
+        setErrorKey('admin.restore_error');
       } finally {
         if (fileInputRef.current) fileInputRef.current.value = '';
       }
@@ -180,7 +182,7 @@ export function AdminPanel() {
   const handleSaveService = async (e) => {
     e.preventDefault();
     if (!formName.trim() || formPrice === '') {
-      return alert('Preencha o nome e o preço do serviço.');
+      return alert(t('admin.fill_required'));
     }
 
     const serviceData = {
@@ -201,7 +203,7 @@ export function AdminPanel() {
   };
 
   const handleDeleteService = async (id, name) => {
-    if (window.confirm(`Deseja excluir o serviço "${name}"?\n\nOs atendimentos já registrados com este serviço continuarão intactos nos relatórios.`)) {
+    if (window.confirm(t('admin.delete_service_confirm', { name }))) {
       await db.services.delete(id);
       loadServices();
     }
@@ -211,8 +213,8 @@ export function AdminPanel() {
     <div style={styles.container}>
       <div style={styles.header}>
         <ShieldAlert size={28} color="#E5A93C" />
-        <h2 style={styles.title}>Área Administrativa</h2>
-        <p style={styles.subtitle}>Gerenciamento de dados e configurações</p>
+        <h2 style={styles.title}>{t('admin.title')}</h2>
+        <p style={styles.subtitle}>{t('admin.subtitle')}</p>
       </div>
 
       {/* SEÇÃO 1: GERENCIAR SERVIÇOS */}
@@ -220,10 +222,10 @@ export function AdminPanel() {
         <div style={styles.cardHeaderBetween}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <Tag size={20} color="#E5A93C" />
-            <h3 style={styles.cardTitle}>Gerenciar Serviços</h3>
+            <h3 style={styles.cardTitle}>{t('admin.manage_services')}</h3>
           </div>
           <button onClick={() => handleOpenForm()} style={styles.addBtn}>
-            <Plus size={16} /> Novo
+            <Plus size={16} /> {t('admin.new_btn')}
           </button>
         </div>
 
@@ -245,10 +247,10 @@ export function AdminPanel() {
                 </div>
 
                 <div style={styles.serviceRowActions}>
-                  <button onClick={() => handleOpenForm(item)} style={styles.iconBtn} title="Editar">
+                  <button onClick={() => handleOpenForm(item)} style={styles.iconBtn}>
                     <Edit2 size={16} color="#38BDF8" />
                   </button>
-                  <button onClick={() => handleDeleteService(item.id, item.name)} style={styles.iconBtn} title="Excluir">
+                  <button onClick={() => handleDeleteService(item.id, item.name)} style={styles.iconBtn}>
                     <Trash2 size={16} color="#EF4444" />
                   </button>
                 </div>
@@ -262,36 +264,36 @@ export function AdminPanel() {
       <div style={styles.sectionCard}>
         <div style={styles.cardHeader}>
           <Database size={20} color="#38BDF8" />
-          <h3 style={styles.cardTitle}>Backup e Restauração</h3>
+          <h3 style={styles.cardTitle}>{t('admin.backup_title')}</h3>
         </div>
         <p style={styles.cardDescription}>
-          Exporte uma cópia de segurança para o WhatsApp ou restaure os dados a partir de um arquivo JSON salvo anteriormente.
+          {t('admin.backup_desc')}
         </p>
 
-        {statusMessage && (
+        {statusKey && (
           <div style={styles.statusBox}>
             <CheckCircle size={16} color="#10B981" />
-            <span>{statusMessage}</span>
+            <span>{t(statusKey)}</span>
           </div>
         )}
 
-        {errorMessage && (
+        {errorKey && (
           <div style={styles.errorBox}>
             <AlertTriangle size={16} color="#EF4444" />
-            <span>{errorMessage}</span>
+            <span>{t(errorKey)}</span>
           </div>
         )}
         
         <div style={styles.backupButtonsRow}>
           <button onClick={handleBackup} disabled={isExporting} style={styles.actionBtn}>
             <span style={styles.btnContent}>
-              <Share2 size={16} /> Exportar
+              <Share2 size={16} /> {t('admin.export_btn')}
             </span>
           </button>
 
           <button onClick={() => fileInputRef.current && fileInputRef.current.click()} style={styles.restoreBtn}>
             <span style={styles.btnContent}>
-              <Upload size={16} /> Restaurar JSON
+              <Upload size={16} /> {t('admin.restore_btn')}
             </span>
           </button>
 
@@ -310,7 +312,7 @@ export function AdminPanel() {
         <div style={styles.modalOverlay}>
           <div style={styles.modalBody}>
             <div style={styles.modalHeader}>
-              <h3 style={styles.modalTitle}>{editingId ? 'Editar Serviço' : 'Novo Serviço'}</h3>
+              <h3 style={styles.modalTitle}>{editingId ? t('admin.edit_service') : t('admin.new_service')}</h3>
               <button onClick={() => setIsModalOpen(false)} style={styles.closeBtn}>
                 <X size={20} color="#A1A1AA" />
               </button>
@@ -318,19 +320,19 @@ export function AdminPanel() {
 
             <form onSubmit={handleSaveService} style={styles.modalForm}>
               <div style={styles.inputGroup}>
-                <label style={styles.inputLabel}>Nome do Serviço:</label>
+                <label style={styles.inputLabel}>{t('admin.service_name_label')}</label>
                 <input 
                   type="text" 
                   value={formName} 
                   onChange={(e) => setFormName(e.target.value)} 
-                  placeholder="Ex: Barba Premium" 
+                  placeholder={t('admin.placeholder_name')} 
                   required 
                   style={styles.textInput}
                 />
               </div>
 
               <div style={styles.inputGroup}>
-                <label style={styles.inputLabel}>Preço Padrão (€):</label>
+                <label style={styles.inputLabel}>{t('admin.service_price_label')}</label>
                 <input 
                   type="number" 
                   step="0.5" 
@@ -343,7 +345,7 @@ export function AdminPanel() {
               </div>
 
               <div style={styles.inputGroup}>
-                <label style={styles.inputLabel}>Ícone:</label>
+                <label style={styles.inputLabel}>{t('admin.service_icon_label')}</label>
                 <div style={styles.iconSelectorGrid}>
                   {AVAILABLE_ICONS.map((icon) => {
                     const IconC = icon.Icon;
@@ -368,7 +370,7 @@ export function AdminPanel() {
               </div>
 
               <button type="submit" style={styles.saveSubmitBtn}>
-                Salvar Serviço
+                {t('admin.save_service')}
               </button>
             </form>
           </div>
