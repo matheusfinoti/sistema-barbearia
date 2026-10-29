@@ -1,0 +1,77 @@
+{
+  "app": {
+    "title": "Barber",
+    "title_highlight": "System",
+    "subtitle": "Painel de Gestão Local"
+  },
+  "nav": {
+    "home": "Início",
+    "new": "Novo",
+    "admin": "Admin"
+  },
+  "form": {
+    "title": "Novo Atendimento",
+    "subtitle": "Selecione um ou mais serviços",
+    "step1": "1. Data e Hora (passos de 10 min)",
+    "now": "Agora",
+    "step2": "2. Serviços Executados",
+    "adjust_price": "Ajuste de valor por serviço:",
+    "total": "TOTAL DO ATENDIMENTO:",
+    "step3": "3. Observação (opcional)",
+    "placeholder_notes": "Ex: Pagamento em dinheiro, cliente habitual...",
+    "confirm": "Confirmar Atendimento",
+    "toast_success": "Corte registrado com sucesso!",
+    "combo_cabelo_barba": "Promoção Cabelo + Barba ativada! (€30)",
+    "combo_rapado_barba": "Promoção Rapado + Barba ativada! (€25)",
+    "select_at_least_one": "Selecione pelo menos um serviço!",
+    "date_warning": "A data selecionada é anterior aos registros mais recentes. Deseja confirmar?",
+    "db_error": "Falha ao acessar o banco de dados local.",
+    "quota_error": "Memória do celular cheia! Libere espaço de armazenamento.",
+    "save_error": "Erro ao gravar no banco local. Verifique as permissões do navegador."
+  },
+  "list": {
+    "title": "Últimos Cortes",
+    "registered": "registrados",
+    "period": "Período:",
+    "period_today": "Hoje",
+    "period_week": "Últimos 7 dias",
+    "period_month": "Este Mês",
+    "period_all": "Todo o Histórico",
+    "service": "Serviço:",
+    "all_services": "Todos os Serviços",
+    "empty": "Nenhum corte encontrado para os filtros selecionados.",
+    "delete_confirm": "Deseja realmente remover este registro de corte?",
+    "show": "Exibir:",
+    "per_page": "por pág."
+  },
+  "metrics": {
+    "today_revenue": "Faturamento Hoje",
+    "month_revenue": "Faturamento Mês",
+    "today_cuts": "Atendimentos Hoje",
+    "avg_ticket": "Ticket Médio"
+  },
+  "admin": {
+    "title": "Área Administrativa",
+    "subtitle": "Gerenciamento de dados e configurações",
+    "manage_services": "Gerenciar Serviços",
+    "new_btn": "Novo",
+    "backup_title": "Backup e Restauração",
+    "backup_desc": "Exporte uma cópia de segurança para o WhatsApp ou restaure os dados a partir de um arquivo JSON salvo anteriormente.",
+    "export_btn": "Exportar",
+    "restore_btn": "Restaurar JSON",
+    "backup_success": "Backup enviado com sucesso!",
+    "backup_downloaded": "Arquivo baixado na pasta \"Downloads\". Envie-o pelo WhatsApp.",
+    "restore_confirm_title": "Atenção! A restauração irá substituir os dados atuais por:\n\n- {{services}} serviços\n- {{appointments}} atendimentos registrados\n\nDeseja realmente continuar?",
+    "restore_success": "Banco de dados restaurado com sucesso!",
+    "restore_invalid": "Arquivo de backup inválido! O JSON precisa conter as tabelas \"services\" e \"appointments\".",
+    "restore_error": "Erro ao processar o arquivo JSON. Verifique se o arquivo está corrompido.",
+    "delete_service_confirm": "Deseja excluir o serviço \"{{name}}\"?\n\nOs atendimentos já registrados com este serviço continuarão intactos nos relatórios.",
+    "edit_service": "Editar Serviço",
+    "new_service": "Novo Serviço",
+    "service_name_label": "Nome do Serviço:",
+    "service_price_label": "Preço Padrão (€):",
+    "service_icon_label": "Ícone:",
+    "save_service": "Salvar Serviço",
+    "fill_required": "Preencha o nome e o preço do serviço."
+  }
+}

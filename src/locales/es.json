@@ -1,0 +1,77 @@
+{
+  "app": {
+    "title": "Barber",
+    "title_highlight": "System",
+    "subtitle": "Panel de Gestión Local"
+  },
+  "nav": {
+    "home": "Inicio",
+    "new": "Nuevo",
+    "admin": "Admin"
+  },
+  "form": {
+    "title": "Nuevo Servicio",
+    "subtitle": "Seleccione uno o más servicios",
+    "step1": "1. Fecha y Hora (pasos de 10 min)",
+    "now": "Ahora",
+    "step2": "2. Servicios Realizados",
+    "adjust_price": "Ajuste de valor por servicio:",
+    "total": "TOTAL DEL SERVICIO:",
+    "step3": "3. Observación (opcional)",
+    "placeholder_notes": "Ej: Pago en efectivo, cliente habitual...",
+    "confirm": "Confirmar Servicio",
+    "toast_success": "¡Corte registrado con éxito!",
+    "combo_cabelo_barba": "¡Promoción Pelo + Barba activada! (€30)",
+    "combo_rapado_barba": "¡Promoción Rapado + Barba activada! (€25)",
+    "select_at_least_one": "¡Seleccione al menos un servicio!",
+    "date_warning": "La fecha seleccionada es anterior a los registros más recientes. ¿Desea confirmar?",
+    "db_error": "Error al acceder a la base de datos local.",
+    "quota_error": "¡Memoria del móvil llena! Libere espacio de almacenamiento.",
+    "save_error": "Error al guardar en la base de datos local. Verifique los permisos del navegador."
+  },
+  "list": {
+    "title": "Últimos Cortes",
+    "registered": "registrados",
+    "period": "Período:",
+    "period_today": "Hoy",
+    "period_week": "Últimos 7 días",
+    "period_month": "Este Mes",
+    "period_all": "Todo el Historial",
+    "service": "Servicio:",
+    "all_services": "Todos los Servicios",
+    "empty": "No se encontraron cortes para los filtros seleccionados.",
+    "delete_confirm": "¿Realmente desea eliminar este registro de corte?",
+    "show": "Mostrar:",
+    "per_page": "por pág."
+  },
+  "metrics": {
+    "today_revenue": "Facturación Hoy",
+    "month_revenue": "Facturación Mes",
+    "today_cuts": "Servicios Hoy",
+    "avg_ticket": "Ticket Medio"
+  },
+  "admin": {
+    "title": "Área Administrativa",
+    "subtitle": "Gestión de datos y configuraciones",
+    "manage_services": "Gestionar Servicios",
+    "new_btn": "Nuevo",
+    "backup_title": "Copia de Seguridad y Restauración",
+    "backup_desc": "Exporte una copia de seguridad para WhatsApp o restaure los datos a partir de un archivo JSON guardado anteriormente.",
+    "export_btn": "Exportar",
+    "restore_btn": "Restaurar JSON",
+    "backup_success": "¡Copia de seguridad enviada con éxito!",
+    "backup_downloaded": "Archivo descargado en la carpeta \"Descargas\". Envíelo por WhatsApp.",
+    "restore_confirm_title": "¡Atención! La restauración reemplazará los datos actuales por:\n\n- {{services}} servicios\n- {{appointments}} servicios registrados\n\n¿Realmente desea continuar?",
+    "restore_success": "¡Base de datos restaurada con éxito!",
+    "restore_invalid": "¡Archivo de copia de seguridad inválido! El JSON debe contener las tablas \"services\" y \"appointments\".",
+    "restore_error": "Error al procesar el archivo JSON. Verifique si el archivo está dañado.",
+    "delete_service_confirm": "¿Desea eliminar el servicio \"{{name}}\"?\n\nLos registros pasados con este servicio permanecerán intactos en los informes.",
+    "edit_service": "Editar Servicio",
+    "new_service": "Nuevo Servicio",
+    "service_name_label": "Nombre del Servicio:",
+    "service_price_label": "Precio Estándar (€):",
+    "service_icon_label": "Icono:",
+    "save_service": "Guardar Servicio",
+    "fill_required": "Complete el nombre y el precio del servicio."
+  }
+}

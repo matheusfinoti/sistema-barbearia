@@ -1,16 +1,16 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { db } from '../services/db';
 import { Filter, Trash2, ChevronLeft, ChevronRight, Calendar, Search } from 'lucide-react';
 
 export function AppointmentList({ refreshTrigger, onDeleteSuccess }) {
+  const { t, i18n } = useTranslation();
   const [appointments, setAppointments] = useState([]);
   const [filterServiceOptions, setFilterServiceOptions] = useState([]);
   
-  // Filtros
   const [selectedService, setSelectedService] = useState('ALL');
-  const [dateRange, setDateRange] = useState('MONTH'); // 'TODAY', 'WEEK', 'MONTH', 'ALL'
+  const [dateRange, setDateRange] = useState('MONTH');
   
-  // Paginação
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
 
@@ -20,10 +20,7 @@ export function AppointmentList({ refreshTrigger, onDeleteSuccess }) {
       const list = await db.appointments.reverse().sortBy('date');
       setAppointments(list);
 
-      // Consolida nomes dos serviços ativos + nomes dos serviços no histórico
       const activeNames = activeServices.map(s => s.name);
-      
-      // Extrai nomes de serviços mesmo em combos (ex: "Cabelo + Barba" -> "Cabelo", "Barba")
       const historicalNames = list.flatMap(item => {
         if (!item.service_name) return [];
         return item.service_name.split(' + ');
@@ -35,16 +32,13 @@ export function AppointmentList({ refreshTrigger, onDeleteSuccess }) {
     loadData();
   }, [refreshTrigger]);
 
-  // Aplicação dos Filtros
   const filteredAppointments = appointments.filter((item) => {
-    // 1. Filtro de Serviço (Verifica se o serviço selecionado faz parte do atendimento)
     if (selectedService !== 'ALL') {
       if (!item.service_name || !item.service_name.includes(selectedService)) {
         return false;
       }
     }
 
-    // 2. Filtro de Data
     const itemDate = new Date(item.date);
     const now = new Date();
 
@@ -64,53 +58,59 @@ export function AppointmentList({ refreshTrigger, onDeleteSuccess }) {
       return itemDate >= startOfMonth;
     }
 
-    return true; // 'ALL'
+    return true;
   });
 
-  // Cálculo da Paginação
   const totalItems = filteredAppointments.length;
   const totalPages = Math.ceil(totalItems / pageSize) || 1;
   const startIndex = (currentPage - 1) * pageSize;
   const paginatedAppointments = filteredAppointments.slice(startIndex, startIndex + pageSize);
 
   const handleDelete = async (id) => {
-    if (window.confirm('Deseja realmente remover este registro de corte?')) {
+    if (window.confirm(t('list.delete_confirm'))) {
       await db.appointments.delete(id);
       if (onDeleteSuccess) onDeleteSuccess();
     }
   };
 
+  const getLocaleCode = () => {
+    const lang = i18n.language?.slice(0, 2);
+    if (lang === 'en') return 'en-US';
+    if (lang === 'pt') return 'pt-BR';
+    return 'es-ES';
+  };
+
   return (
     <div style={styles.container}>
       <div style={styles.headerRow}>
-        <h3 style={styles.sectionTitle}>Últimos Cortes</h3>
-        <span style={styles.badge}>{totalItems} registrados</span>
+        <h3 style={styles.sectionTitle}>{t('list.title')}</h3>
+        <span style={styles.badge}>{totalItems} {t('list.registered')}</span>
       </div>
 
       {/* BARRA DE FILTROS */}
       <div style={styles.filterCard}>
         <div style={styles.filterGroup}>
-          <label style={styles.filterLabel}><Calendar size={14} color="#E5A93C" /> Período:</label>
+          <label style={styles.filterLabel}><Calendar size={14} color="#E5A93C" /> {t('list.period')}</label>
           <select 
             value={dateRange} 
             onChange={(e) => { setDateRange(e.target.value); setCurrentPage(1); }}
             style={styles.selectInput}
           >
-            <option value="TODAY">Hoje</option>
-            <option value="WEEK">Últimos 7 dias</option>
-            <option value="MONTH">Este Mês</option>
-            <option value="ALL">Todo o Histórico</option>
+            <option value="TODAY">{t('list.period_today')}</option>
+            <option value="WEEK">{t('list.period_week')}</option>
+            <option value="MONTH">{t('list.period_month')}</option>
+            <option value="ALL">{t('list.period_all')}</option>
           </select>
         </div>
 
         <div style={styles.filterGroup}>
-          <label style={styles.filterLabel}><Filter size={14} color="#E5A93C" /> Serviço:</label>
+          <label style={styles.filterLabel}><Filter size={14} color="#E5A93C" /> {t('list.service')}</label>
           <select 
             value={selectedService} 
             onChange={(e) => { setSelectedService(e.target.value); setCurrentPage(1); }}
             style={styles.selectInput}
           >
-            <option value="ALL">Todos os Serviços</option>
+            <option value="ALL">{t('list.all_services')}</option>
             {filterServiceOptions.map((serviceName, idx) => (
               <option key={idx} value={serviceName}>{serviceName}</option>
             ))}
@@ -122,12 +122,12 @@ export function AppointmentList({ refreshTrigger, onDeleteSuccess }) {
       {paginatedAppointments.length === 0 ? (
         <div style={styles.emptyState}>
           <Search size={32} color="#52525B" />
-          <p>Nenhum corte encontrado para os filtros selecionados.</p>
+          <p>{t('list.empty')}</p>
         </div>
       ) : (
         <div style={styles.list}>
           {paginatedAppointments.map((item) => {
-            const formattedDate = new Date(item.date).toLocaleString('pt-BR', {
+            const formattedDate = new Date(item.date).toLocaleString(getLocaleCode(), {
               day: '2-digit',
               month: '2-digit',
               hour: '2-digit',
@@ -163,16 +163,16 @@ export function AppointmentList({ refreshTrigger, onDeleteSuccess }) {
       {/* PAGINAÇÃO */}
       <div style={styles.paginationBar}>
         <div style={styles.pageSizeSelector}>
-          <span style={styles.pageLabel}>Exibir:</span>
+          <span style={styles.pageLabel}>{t('list.show')}</span>
           <select 
             value={pageSize} 
             onChange={(e) => { setPageSize(Number(e.target.value)); setCurrentPage(1); }}
             style={styles.pageSizeSelect}
           >
-            <option value={20}>20 por pág.</option>
-            <option value={30}>30 por pág.</option>
-            <option value={40}>40 por pág.</option>
-            <option value={50}>50 por pág.</option>
+            <option value={20}>20 {t('list.per_page')}</option>
+            <option value={30}>30 {t('list.per_page')}</option>
+            <option value={40}>40 {t('list.per_page')}</option>
+            <option value={50}>50 {t('list.per_page')}</option>
           </select>
         </div>
 

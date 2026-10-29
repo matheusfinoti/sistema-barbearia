@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { db } from '../services/db';
 import { 
   Scissors, User, Zap, Smile, Sparkles, 
@@ -41,6 +42,7 @@ function getRoundedCurrentDateTime() {
 }
 
 export function HaircutForm({ onSaveSuccess }) {
+  const { t } = useTranslation();
   const [services, setServices] = useState([]);
   const [selectedItems, setSelectedItems] = useState({});
   const [activeComboMsg, setActiveComboMsg] = useState('');
@@ -54,12 +56,10 @@ export function HaircutForm({ onSaveSuccess }) {
     async function loadServices() {
       try {
         let list = await db.services.toArray();
-        
         if (list.length === 0) {
           await db.services.bulkPut(DEFAULT_SERVICES);
           list = DEFAULT_SERVICES;
         }
-
         setServices(list);
         
         const cabeloItem = list.find(s => s.name === 'Cabelo') || list[0];
@@ -68,11 +68,11 @@ export function HaircutForm({ onSaveSuccess }) {
         }
       } catch (err) {
         console.error('Erro ao carregar serviços:', err);
-        setErrorMessage('Falha ao acessar o banco de dados local.');
+        setErrorMessage(t('form.db_error'));
       }
     }
     loadServices();
-  }, []);
+  }, [t]);
 
   const handleToggleService = (service) => {
     const isSelected = selectedItems.hasOwnProperty(service.id);
@@ -97,12 +97,12 @@ export function HaircutForm({ onSaveSuccess }) {
     if (hasCabelo && hasBarba) {
       updated[cabeloObj.id] = 16;
       updated[barbaObj.id] = 14;
-      comboBanner = 'Promoção Cabelo + Barba ativada! (€30)';
+      comboBanner = t('form.combo_cabelo_barba');
     } 
     else if (hasRapado && hasBarba) {
       updated[rapadoObj.id] = 11;
       updated[barbaObj.id] = 14;
-      comboBanner = 'Promoção Rapado + Barba ativada! (€25)';
+      comboBanner = t('form.combo_rapado_barba');
     }
 
     setSelectedItems(updated);
@@ -131,7 +131,7 @@ export function HaircutForm({ onSaveSuccess }) {
     const selectedIds = Object.keys(selectedItems);
     
     if (selectedIds.length === 0) {
-      return alert('Selecione pelo menos um serviço!');
+      return alert(t('form.select_at_least_one'));
     }
 
     const selectedNames = services
@@ -146,7 +146,7 @@ export function HaircutForm({ onSaveSuccess }) {
       if (lastAppointment) {
         const lastDate = new Date(lastAppointment.date);
         if (newAppointmentDate < new Date(lastDate.getTime() - 86400000)) {
-          if (!window.confirm('A data selecionada é anterior aos registros mais recentes. Deseja confirmar?')) {
+          if (!window.confirm(t('form.date_warning'))) {
             return;
           }
         }
@@ -170,9 +170,9 @@ export function HaircutForm({ onSaveSuccess }) {
     } catch (error) {
       console.error('Erro ao salvar corte:', error);
       if (error.name === 'QuotaExceededError') {
-        setErrorMessage('Memória do celular cheia! Libere espaço de armazenamento.');
+        setErrorMessage(t('form.quota_error'));
       } else {
-        setErrorMessage('Erro ao gravar no banco local. Verifique as permissões do navegador.');
+        setErrorMessage(t('form.save_error'));
       }
     }
   };
@@ -181,7 +181,7 @@ export function HaircutForm({ onSaveSuccess }) {
     <div style={styles.container}>
       {savedToast && (
         <div style={styles.toast}>
-          <Check size={20} color="#10B981" /> Corte registrado com sucesso!
+          <Check size={20} color="#10B981" /> {t('form.toast_success')}
         </div>
       )}
 
@@ -193,14 +193,14 @@ export function HaircutForm({ onSaveSuccess }) {
 
       <form onSubmit={handleSubmit} style={styles.form}>
         <div style={styles.header}>
-          <h2 style={styles.title}>Novo Atendimento</h2>
-          <span style={styles.subtitle}>Selecione um ou mais serviços</span>
+          <h2 style={styles.title}>{t('form.title')}</h2>
+          <span style={styles.subtitle}>{t('form.subtitle')}</span>
         </div>
 
         {/* 1º CAMPO: DATA E HORA */}
         <div style={styles.sectionCard}>
           <label style={styles.label}>
-            <Clock size={16} color="#E5A93C" /> 1. Data e Hora (passos de 10 min)
+            <Clock size={16} color="#E5A93C" /> {t('form.step1')}
           </label>
           <input 
             type="datetime-local" 
@@ -211,7 +211,7 @@ export function HaircutForm({ onSaveSuccess }) {
             style={styles.dateTimeInput}
           />
           <div style={styles.quickTimeBar}>
-            <button type="button" onClick={() => setDate(getRoundedCurrentDateTime())} style={styles.chipBtn}>Agora</button>
+            <button type="button" onClick={() => setDate(getRoundedCurrentDateTime())} style={styles.chipBtn}>{t('form.now')}</button>
             <button type="button" onClick={() => adjustMinutes(-10)} style={styles.chipBtn}>-10 min</button>
             <button type="button" onClick={() => adjustMinutes(10)} style={styles.chipBtn}>+10 min</button>
             <button type="button" onClick={() => adjustMinutes(30)} style={styles.chipBtn}>+30 min</button>
@@ -221,7 +221,7 @@ export function HaircutForm({ onSaveSuccess }) {
         {/* 2º CAMPO: GRADE DE SERVIÇOS */}
         <div style={styles.sectionCard}>
           <label style={styles.label}>
-            <Tag size={16} color="#E5A93C" /> 2. Serviços Executados
+            <Tag size={16} color="#E5A93C" /> {t('form.step2')}
           </label>
 
           {activeComboMsg && (
@@ -272,7 +272,7 @@ export function HaircutForm({ onSaveSuccess }) {
           {/* SLIDERS DE AJUSTE INDIVIDUAL */}
           {Object.keys(selectedItems).length > 0 && (
             <div style={styles.priceSlidersBox}>
-              <span style={styles.sliderBoxTitle}>Ajuste de valor por serviço:</span>
+              <span style={styles.sliderBoxTitle}>{t('form.adjust_price')}</span>
               {services
                 .filter(s => selectedItems.hasOwnProperty(s.id))
                 .map((service) => (
@@ -296,7 +296,7 @@ export function HaircutForm({ onSaveSuccess }) {
           )}
 
           <div style={styles.totalBox}>
-            <span>TOTAL DO ATENDIMENTO:</span>
+            <span>{t('form.total')}</span>
             <span style={styles.totalPriceText}>€ {totalPrice}</span>
           </div>
         </div>
@@ -304,19 +304,19 @@ export function HaircutForm({ onSaveSuccess }) {
         {/* 3º CAMPO: OBSERVAÇÃO */}
         <div style={styles.sectionCard}>
           <label style={styles.label}>
-            <FileText size={16} color="#A1A1AA" /> 3. Observação (opcional)
+            <FileText size={16} color="#A1A1AA" /> {t('form.step3')}
           </label>
           <input 
             type="text" 
             value={notes} 
             onChange={(e) => setNotes(e.target.value)} 
-            placeholder="Ex: Pagamento em dinheiro, cliente habitual..." 
+            placeholder={t('form.placeholder_notes')} 
             style={styles.textInput}
           />
         </div>
 
         <button type="submit" style={styles.submitBtn}>
-          <Check size={22} /> Confirmar Atendimento (€ {totalPrice})
+          <Check size={22} /> {t('form.confirm')} (€ {totalPrice})
         </button>
       </form>
     </div>
@@ -394,7 +394,7 @@ const styles = {
     gap: '12px',
     boxSizing: 'border-box',
     width: '100%',
-    overflow: 'hidden', // Trava para não estourar em nenhuma resolução
+    overflow: 'hidden',
   },
   label: {
     fontSize: '13px',
@@ -415,7 +415,7 @@ const styles = {
     maxWidth: '100%',
     boxSizing: 'border-box',
     minWidth: 0,
-    WebkitAppearance: 'none', // Remove formatação nativa que estourava no iOS/Android
+    WebkitAppearance: 'none',
   },
   quickTimeBar: {
     display: 'flex',

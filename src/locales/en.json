@@ -1,0 +1,77 @@
+{
+  "app": {
+    "title": "Barber",
+    "title_highlight": "System",
+    "subtitle": "Local Management Panel"
+  },
+  "nav": {
+    "home": "Home",
+    "new": "New",
+    "admin": "Admin"
+  },
+  "form": {
+    "title": "New Service",
+    "subtitle": "Select one or more services",
+    "step1": "1. Date and Time (10 min steps)",
+    "now": "Now",
+    "step2": "2. Performed Services",
+    "adjust_price": "Price adjustment per service:",
+    "total": "SERVICE TOTAL:",
+    "step3": "3. Note (optional)",
+    "placeholder_notes": "Ex: Cash payment, regular customer...",
+    "confirm": "Confirm Service",
+    "toast_success": "Haircut recorded successfully!",
+    "combo_cabelo_barba": "Hair + Beard promo activated! (€30)",
+    "combo_rapado_barba": "Shaved + Beard promo activated! (€25)",
+    "select_at_least_one": "Select at least one service!",
+    "date_warning": "Selected date is earlier than recent records. Do you wish to confirm?",
+    "db_error": "Failed to access local database.",
+    "quota_error": "Device storage full! Please free up space.",
+    "save_error": "Error saving to local database. Check browser permissions."
+  },
+  "list": {
+    "title": "Recent Haircuts",
+    "registered": "recorded",
+    "period": "Period:",
+    "period_today": "Today",
+    "period_week": "Last 7 days",
+    "period_month": "This Month",
+    "period_all": "All History",
+    "service": "Service:",
+    "all_services": "All Services",
+    "empty": "No haircuts found for the selected filters.",
+    "delete_confirm": "Are you sure you want to delete this haircut record?",
+    "show": "Show:",
+    "per_page": "per page"
+  },
+  "metrics": {
+    "today_revenue": "Today's Revenue",
+    "month_revenue": "Month's Revenue",
+    "today_cuts": "Today's Services",
+    "avg_ticket": "Average Ticket"
+  },
+  "admin": {
+    "title": "Admin Area",
+    "subtitle": "Data and settings management",
+    "manage_services": "Manage Services",
+    "new_btn": "New",
+    "backup_title": "Backup and Restore",
+    "backup_desc": "Export a backup copy to WhatsApp or restore data from a previously saved JSON file.",
+    "export_btn": "Export",
+    "restore_btn": "Restore JSON",
+    "backup_success": "Backup sent successfully!",
+    "backup_downloaded": "File downloaded to \"Downloads\" folder. Send it via WhatsApp.",
+    "restore_confirm_title": "Warning! Restoration will replace current data with:\n\n- {{services}} services\n- {{appointments}} recorded services\n\nAre you sure you want to continue?",
+    "restore_success": "Database restored successfully!",
+    "restore_invalid": "Invalid backup file! The JSON must contain \"services\" and \"appointments\" tables.",
+    "restore_error": "Error processing JSON file. Check if the file is corrupted.",
+    "delete_service_confirm": "Do you want to delete the service \"{{name}}\"?\n\nPast records with this service will remain intact in reports.",
+    "edit_service": "Edit Service",
+    "new_service": "New Service",
+    "service_name_label": "Service Name:",
+    "service_price_label": "Default Price (€):",
+    "service_icon_label": "Icon:",
+    "save_service": "Save Service",
+    "fill_required": "Please fill in the service name and price."
+  }
+}

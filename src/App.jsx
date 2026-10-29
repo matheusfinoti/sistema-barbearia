@@ -1,26 +1,73 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { DashboardMetrics } from './components/DashboardMetrics';
 import { AppointmentList } from './components/AppointmentList';
 import { HaircutForm } from './components/HaircutForm';
-import { AdminPanel } from './components/AdminPanel'; // IMPORTAMOS O PAINEL AQUI
-import { LayoutDashboard, PlusCircle, ShieldAlert } from 'lucide-react'; // ADICIONADO ÍCONE SHIELD
+import { AdminPanel } from './components/AdminPanel';
+import { LayoutDashboard, PlusCircle, ShieldAlert, Globe } from 'lucide-react';
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState('DASHBOARD'); // 'DASHBOARD', 'NEW_HAIRCUT', 'ADMIN'
+  const { t, i18n } = useTranslation();
+  const [activeTab, setActiveTab] = useState('DASHBOARD');
   const [refreshKey, setRefreshKey] = useState(0);
 
   const handleDataChange = () => {
     setRefreshKey(prev => prev + 1);
   };
 
+  const changeLanguage = (lng) => {
+    i18n.changeLanguage(lng);
+  };
+
+  const currentLang = i18n.language?.slice(0, 2) || 'es';
+
   return (
     <div style={styles.appContainer}>
+      {/* SELETOR DE IDIOMAS + CABEÇALHO */}
       <header style={styles.header}>
-        <h1 style={styles.brandTitle}>Barber<span style={{ color: '#E5A93C' }}>System</span></h1>
-        <p style={styles.brandSubtitle}>Painel de Gestão Local</p>
+        <div style={styles.langBar}>
+          <Globe size={14} color="#A1A1AA" />
+          <button 
+            onClick={() => changeLanguage('es')} 
+            style={{
+              ...styles.langBtn,
+              color: currentLang === 'es' ? '#E5A93C' : '#71717A',
+              fontWeight: currentLang === 'es' ? '700' : '400',
+            }}
+          >
+            ES
+          </button>
+          <span style={styles.langDivider}>|</span>
+          <button 
+            onClick={() => changeLanguage('en')} 
+            style={{
+              ...styles.langBtn,
+              color: currentLang === 'en' ? '#E5A93C' : '#71717A',
+              fontWeight: currentLang === 'en' ? '700' : '400',
+            }}
+          >
+            EN
+          </button>
+          <span style={styles.langDivider}>|</span>
+          <button 
+            onClick={() => changeLanguage('pt')} 
+            style={{
+              ...styles.langBtn,
+              color: currentLang === 'pt' ? '#E5A93C' : '#71717A',
+              fontWeight: currentLang === 'pt' ? '700' : '400',
+            }}
+          >
+            PT
+          </button>
+        </div>
+
+        <h1 style={styles.brandTitle}>
+          {t('app.title')}<span style={{ color: '#E5A93C' }}>{t('app.title_highlight')}</span>
+        </h1>
+        <p style={styles.brandSubtitle}>{t('app.subtitle')}</p>
       </header>
 
-      {/* ABA DE NAVEGAÇÃO - AGORA COM 3 BOTÕES */}
+      {/* ABA DE NAVEGAÇÃO */}
       <nav style={styles.navBar}>
         <button 
           onClick={() => setActiveTab('DASHBOARD')} 
@@ -31,7 +78,7 @@ export default function App() {
             fontWeight: activeTab === 'DASHBOARD' ? '700' : '500',
           }}
         >
-          <LayoutDashboard size={18} /> Início
+          <LayoutDashboard size={18} /> {t('nav.home')}
         </button>
 
         <button 
@@ -43,7 +90,7 @@ export default function App() {
             fontWeight: activeTab === 'NEW_HAIRCUT' ? '700' : '500',
           }}
         >
-          <PlusCircle size={18} /> Novo
+          <PlusCircle size={18} /> {t('nav.new')}
         </button>
 
         <button 
@@ -55,7 +102,7 @@ export default function App() {
             fontWeight: activeTab === 'ADMIN' ? '700' : '500',
           }}
         >
-          <ShieldAlert size={18} /> Admin
+          <ShieldAlert size={18} /> {t('nav.admin')}
         </button>
       </nav>
 
@@ -79,7 +126,6 @@ export default function App() {
           />
         )}
 
-        {/* NOVA ÁREA ADMINISTRATIVA */}
         {activeTab === 'ADMIN' && (
           <AdminPanel />
         )}
@@ -97,10 +143,30 @@ const styles = {
     padding: '16px',
     color: '#F4F4F5',
     fontFamily: 'system-ui, -apple-system, sans-serif',
+    boxSizing: 'border-box',
   },
   header: {
     textAlign: 'center',
     marginBottom: '16px',
+    position: 'relative',
+  },
+  langBar: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '6px',
+    marginBottom: '8px',
+  },
+  langBtn: {
+    backgroundColor: 'transparent',
+    border: 'none',
+    fontSize: '12px',
+    cursor: 'pointer',
+    padding: '2px 4px',
+  },
+  langDivider: {
+    fontSize: '10px',
+    color: '#3F3F46',
   },
   brandTitle: {
     fontSize: '24px',
@@ -116,7 +182,7 @@ const styles = {
   },
   navBar: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(3, 1fr)', // ALTERADO PARA 3 COLUNAS
+    gridTemplateColumns: 'repeat(3, 1fr)',
     gap: '8px',
     marginBottom: '16px',
   },
