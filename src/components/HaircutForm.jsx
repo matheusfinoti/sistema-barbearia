@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { db } from '../services/db';
 import { 
   Scissors, User, Zap, Smile, Sparkles, 
-  Palette, Sun, Waves, Coins, Check, Clock, FileText, Tag 
+  Palette, Sun, Waves, Coins, Check, Clock, FileText, Tag, AlertTriangle 
 } from 'lucide-react';
 
 const iconMap = {
@@ -48,6 +48,7 @@ export function HaircutForm({ onSaveSuccess }) {
   const [date, setDate] = useState(getRoundedCurrentDateTime());
   const [notes, setNotes] = useState('');
   const [savedToast, setSavedToast] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
   useEffect(() => {
     async function syncAndLoadServices() {
@@ -69,6 +70,7 @@ export function HaircutForm({ onSaveSuccess }) {
         }
       } catch (err) {
         console.error('Erro ao sincronizar serviços:', err);
+        setErrorMessage('Falha ao acessar o banco de dados local.');
       }
     }
     syncAndLoadServices();
@@ -127,6 +129,7 @@ export function HaircutForm({ onSaveSuccess }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setErrorMessage('');
     const selectedIds = Object.keys(selectedItems);
     
     if (selectedIds.length === 0) {
@@ -138,20 +141,45 @@ export function HaircutForm({ onSaveSuccess }) {
       .map(s => s.name)
       .join(' + ');
 
-    await db.appointments.add({
-      date: new Date(date).toISOString(),
-      service_id: Number(selectedIds[0]),
-      service_name: selectedNames,
-      price: totalPrice,
-      notes: notes,
-    });
+    const newAppointmentDate = new Date(date);
 
-    setSavedToast(true);
-    setTimeout(() => setSavedToast(false), 2500);
+    try {
+      // 1. Trava anti-fraude do relógio (Item 4)
+      const lastAppointment = await db.appointments.orderBy('date').last();
+      if (lastAppointment) {
+        const lastDate = new Date(lastAppointment.date);
+        // Se tentar lançar uma data anterior a mais de 24h do último registro sem motivo
+        if (newAppointmentDate < new Date(lastDate.getTime() - 86400000)) {
+          if (!window.confirm('A data selecionada é anterior aos registros mais recentes. Deseja confirmar?')) {
+            return;
+          }
+        }
+      }
 
-    setNotes('');
-    setDate(getRoundedCurrentDateTime());
-    if (onSaveSuccess) onSaveSuccess();
+      // 2. Gravando no IndexedDB com captura de erro (Item 3)
+      await db.appointments.add({
+        date: newAppointmentDate.toISOString(),
+        service_id: Number(selectedIds[0]),
+        service_name: selectedNames,
+        price: totalPrice,
+        notes: notes,
+      });
+
+      setSavedToast(true);
+      setTimeout(() => setSavedToast(false), 2500);
+
+      setNotes('');
+      setDate(getRoundedCurrentDateTime());
+      if (onSaveSuccess) onSaveSuccess();
+
+    } catch (error) {
+      console.error('Erro ao salvar corte:', error);
+      if (error.name === 'QuotaExceededError') {
+        setErrorMessage('Memória do celular cheia! Libere espaço de armazenamento.');
+      } else {
+        setErrorMessage('Erro ao gravar no banco local. Verifique as permissões do navegador.');
+      }
+    }
   };
 
   return (
@@ -159,6 +187,12 @@ export function HaircutForm({ onSaveSuccess }) {
       {savedToast && (
         <div style={styles.toast}>
           <Check size={20} color="#10B981" /> Corte registrado com sucesso!
+        </div>
+      )}
+
+      {errorMessage && (
+        <div style={styles.errorBox}>
+          <AlertTriangle size={20} color="#EF4444" /> {errorMessage}
         </div>
       )}
 
@@ -240,7 +274,7 @@ export function HaircutForm({ onSaveSuccess }) {
             })}
           </div>
 
-          {/* SLIDERS DE AJUSTE INDIVIDUAL (ABAIXO DA GRADE) */}
+          {/* SLIDERS DE AJUSTE INDIVIDUAL */}
           {Object.keys(selectedItems).length > 0 && (
             <div style={styles.priceSlidersBox}>
               <span style={styles.sliderBoxTitle}>Ajuste de valor por serviço:</span>
@@ -294,7 +328,6 @@ export function HaircutForm({ onSaveSuccess }) {
   );
 }
 
-// ESTILOS DARK BARBER PREMIUM
 const styles = {
   container: {
     maxWidth: '480px',
@@ -322,6 +355,18 @@ const styles = {
     zIndex: 9999,
     fontSize: '14px',
     fontWeight: '500',
+  },
+  errorBox: {
+    backgroundColor: '#311212',
+    border: '1px solid #EF4444',
+    color: '#F87171',
+    padding: '12px 16px',
+    borderRadius: '10px',
+    marginBottom: '12px',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '10px',
+    fontSize: '13px',
   },
   form: {
     display: 'flex',
