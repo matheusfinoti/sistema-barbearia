@@ -26,7 +26,6 @@ export function AdminPanel() {
   const [isExporting, setIsExporting] = useState(false);
   const [statusMessage, setStatusMessage] = useState('');
 
-  // Formulário de Criação / Edição de Serviço
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [formName, setFormName] = useState('');
@@ -42,7 +41,6 @@ export function AdminPanel() {
     setServices(list);
   }
 
-  // Backup para WhatsApp
   const handleBackup = async () => {
     setStatusMessage('');
     setIsExporting(true);
@@ -99,7 +97,6 @@ export function AdminPanel() {
     }
   };
 
-  // Abrir Modal de Criação/Edição
   const handleOpenForm = (service = null) => {
     if (service) {
       setEditingId(service.id);
@@ -115,7 +112,6 @@ export function AdminPanel() {
     setIsModalOpen(true);
   };
 
-  // Salvar Serviço
   const handleSaveService = async (e) => {
     e.preventDefault();
     if (!formName.trim() || formPrice === '') {
@@ -139,7 +135,6 @@ export function AdminPanel() {
     loadServices();
   };
 
-  // Excluir Serviço
   const handleDeleteService = async (id, name) => {
     if (window.confirm(`Deseja excluir o serviço "${name}"?\n\nOs atendimentos já registrados com este serviço continuarão intactos nos relatórios.`)) {
       await db.services.delete(id);
@@ -178,17 +173,18 @@ export function AdminPanel() {
                   <div style={styles.iconCircle}>
                     <IconComp size={18} color="#E5A93C" />
                   </div>
-                  <div>
+                  {/* Container ajustado com alinhamento explícito à esquerda */}
+                  <div style={styles.serviceTextContainer}>
                     <div style={styles.serviceRowName}>{item.name}</div>
                     <div style={styles.serviceRowPrice}>€ {Number(item.price).toFixed(2)}</div>
                   </div>
                 </div>
 
                 <div style={styles.serviceRowActions}>
-                  <button onClick={() => handleOpenForm(item)} style={styles.iconBtn}>
+                  <button onClick={() => handleOpenForm(item)} style={styles.iconBtn} title="Editar">
                     <Edit2 size={16} color="#38BDF8" />
                   </button>
-                  <button onClick={() => handleDeleteService(item.id, item.name)} style={styles.iconBtn}>
+                  <button onClick={() => handleDeleteService(item.id, item.name)} style={styles.iconBtn} title="Excluir">
                     <Trash2 size={16} color="#EF4444" />
                   </button>
                 </div>
@@ -385,7 +381,17 @@ const styles = {
   serviceRowLeft: {
     display: 'flex',
     alignItems: 'center',
-    gap: '10px',
+    gap: '12px',
+    flex: 1,
+    minWidth: 0,
+  },
+  serviceTextContainer: {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'flex-start',
+    justifyContent: 'center',
+    gap: '2px',
+    minWidth: 0,
   },
   iconCircle: {
     width: '32px',
@@ -395,21 +401,31 @@ const styles = {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
+    flexShrink: 0,
   },
   serviceRowName: {
     fontSize: '13px',
     fontWeight: '600',
     color: '#FFF',
+    margin: 0,
+    padding: 0,
+    textAlign: 'left',
+    lineHeight: '1.2',
   },
   serviceRowPrice: {
     fontSize: '12px',
     color: '#E5A93C',
     fontWeight: '700',
+    margin: 0,
+    padding: 0,
+    textAlign: 'left',
+    lineHeight: '1.2',
   },
   serviceRowActions: {
     display: 'flex',
     alignItems: 'center',
     gap: '6px',
+    flexShrink: 0,
   },
   iconBtn: {
     backgroundColor: 'transparent',

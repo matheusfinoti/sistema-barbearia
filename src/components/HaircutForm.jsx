@@ -55,7 +55,6 @@ export function HaircutForm({ onSaveSuccess }) {
       try {
         let list = await db.services.toArray();
         
-        // CORREÇÃO AQUI: Só popula o padrão se o banco estiver 100% VAZIO
         if (list.length === 0) {
           await db.services.bulkPut(DEFAULT_SERVICES);
           list = DEFAULT_SERVICES;
@@ -333,6 +332,7 @@ const styles = {
     minHeight: '100vh',
     color: '#F4F4F5',
     fontFamily: 'system-ui, -apple-system, sans-serif',
+    boxSizing: 'border-box',
   },
   toast: {
     position: 'fixed',
@@ -368,6 +368,8 @@ const styles = {
     display: 'flex',
     flexDirection: 'column',
     gap: '16px',
+    width: '100%',
+    boxSizing: 'border-box',
   },
   header: {
     marginBottom: '2px',
@@ -390,6 +392,9 @@ const styles = {
     display: 'flex',
     flexDirection: 'column',
     gap: '12px',
+    boxSizing: 'border-box',
+    width: '100%',
+    overflow: 'hidden', // Trava para não estourar em nenhuma resolução
   },
   label: {
     fontSize: '13px',
@@ -407,7 +412,10 @@ const styles = {
     borderRadius: '8px',
     fontSize: '15px',
     width: '100%',
+    maxWidth: '100%',
     boxSizing: 'border-box',
+    minWidth: 0,
+    WebkitAppearance: 'none', // Remove formatação nativa que estourava no iOS/Android
   },
   quickTimeBar: {
     display: 'flex',
@@ -554,4 +562,4 @@ const styles = {
     marginTop: '4px',
     boxShadow: '0 4px 14px rgba(229, 169, 60, 0.3)',
   },
-};''
+};
