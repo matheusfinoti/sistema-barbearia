@@ -73,5 +73,20 @@
     "service_icon_label": "Icon:",
     "save_service": "Save Service",
     "fill_required": "Please fill in the service name and price."
+  },
+  "heatmap": {
+    "title": "Revenue Heatmap",
+    "total_day": "Day total",
+    "cuts_count": "{{count}} service(s)",
+    "no_data": "No records on this date",
+    "weekdays": [
+      "Sun",
+      "Mon",
+      "Tue",
+      "Wed",
+      "Thu",
+      "Fri",
+      "Sat"
+    ]
   }
 }

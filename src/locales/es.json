@@ -73,5 +73,20 @@
     "service_icon_label": "Icono:",
     "save_service": "Guardar Servicio",
     "fill_required": "Complete el nombre y el precio del servicio."
+  },
+  "heatmap": {
+    "title": "Mapa de Facturación",
+    "total_day": "Total del día",
+    "cuts_count": "{{count}} servicio(s)",
+    "no_data": "Sin registros en esta fecha",
+    "weekdays": [
+      "Dom",
+      "Lun",
+      "Mar",
+      "Mié",
+      "Jue",
+      "Vie",
+      "Sáb"
+    ]
   }
 }

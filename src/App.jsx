@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { DashboardMetrics } from './components/DashboardMetrics';
+import { RevenueHeatmap } from './components/RevenueHeatmap'; // IMPORTADO AQUI
 import { AppointmentList } from './components/AppointmentList';
 import { HaircutForm } from './components/HaircutForm';
 import { AdminPanel } from './components/AdminPanel';
@@ -23,7 +24,6 @@ export default function App() {
 
   return (
     <div style={styles.appContainer}>
-      {/* SELETOR DE IDIOMAS + CABEÇALHO */}
       <header style={styles.header}>
         <div style={styles.langBar}>
           <Globe size={14} color="#A1A1AA" />
@@ -67,7 +67,6 @@ export default function App() {
         <p style={styles.brandSubtitle}>{t('app.subtitle')}</p>
       </header>
 
-      {/* ABA DE NAVEGAÇÃO */}
       <nav style={styles.navBar}>
         <button 
           onClick={() => setActiveTab('DASHBOARD')} 
@@ -110,6 +109,10 @@ export default function App() {
         {activeTab === 'DASHBOARD' && (
           <>
             <DashboardMetrics refreshTrigger={refreshKey} />
+            
+            {/* NOVO MAPA DE CALOR */}
+            <RevenueHeatmap refreshTrigger={refreshKey} />
+
             <AppointmentList 
               refreshTrigger={refreshKey} 
               onDeleteSuccess={handleDataChange} 
