@@ -51,13 +51,12 @@ export function HaircutForm({ onSaveSuccess }) {
   const [errorMessage, setErrorMessage] = useState('');
 
   useEffect(() => {
-    async function syncAndLoadServices() {
+    async function loadServices() {
       try {
         let list = await db.services.toArray();
-        const isMatchingNew = list.length === 9 && list.some(s => s.name === 'Cabelo');
         
-        if (!isMatchingNew) {
-          await db.services.clear();
+        // CORREÇÃO AQUI: Só popula o padrão se o banco estiver 100% VAZIO
+        if (list.length === 0) {
           await db.services.bulkPut(DEFAULT_SERVICES);
           list = DEFAULT_SERVICES;
         }
@@ -69,11 +68,11 @@ export function HaircutForm({ onSaveSuccess }) {
           setSelectedItems({ [cabeloItem.id]: cabeloItem.price });
         }
       } catch (err) {
-        console.error('Erro ao sincronizar serviços:', err);
+        console.error('Erro ao carregar serviços:', err);
         setErrorMessage('Falha ao acessar o banco de dados local.');
       }
     }
-    syncAndLoadServices();
+    loadServices();
   }, []);
 
   const handleToggleService = (service) => {
@@ -144,11 +143,9 @@ export function HaircutForm({ onSaveSuccess }) {
     const newAppointmentDate = new Date(date);
 
     try {
-      // 1. Trava anti-fraude do relógio (Item 4)
       const lastAppointment = await db.appointments.orderBy('date').last();
       if (lastAppointment) {
         const lastDate = new Date(lastAppointment.date);
-        // Se tentar lançar uma data anterior a mais de 24h do último registro sem motivo
         if (newAppointmentDate < new Date(lastDate.getTime() - 86400000)) {
           if (!window.confirm('A data selecionada é anterior aos registros mais recentes. Deseja confirmar?')) {
             return;
@@ -156,7 +153,6 @@ export function HaircutForm({ onSaveSuccess }) {
         }
       }
 
-      // 2. Gravando no IndexedDB com captura de erro (Item 3)
       await db.appointments.add({
         date: newAppointmentDate.toISOString(),
         service_id: Number(selectedIds[0]),
@@ -223,10 +219,10 @@ export function HaircutForm({ onSaveSuccess }) {
           </div>
         </div>
 
-        {/* 2º CAMPO: GRADE 3x3 DE SERVIÇOS */}
+        {/* 2º CAMPO: GRADE DE SERVIÇOS */}
         <div style={styles.sectionCard}>
           <label style={styles.label}>
-            <Tag size={16} color="#E5A93C" /> 2. Serviços Executados (Grade 3x3)
+            <Tag size={16} color="#E5A93C" /> 2. Serviços Executados
           </label>
 
           {activeComboMsg && (
@@ -236,7 +232,7 @@ export function HaircutForm({ onSaveSuccess }) {
           )}
 
           <div style={styles.grid3x3}>
-            {services.slice(0, 9).map((service) => {
+            {services.map((service) => {
               const IconComponent = iconMap[service.icon_name] || Scissors;
               const isSelected = selectedItems.hasOwnProperty(service.id);
 
@@ -558,4 +554,4 @@ const styles = {
     marginTop: '4px',
     boxShadow: '0 4px 14px rgba(229, 169, 60, 0.3)',
   },
-};
+};''

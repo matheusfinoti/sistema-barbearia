@@ -4,7 +4,7 @@ import { Filter, Trash2, ChevronLeft, ChevronRight, Calendar, Search } from 'luc
 
 export function AppointmentList({ refreshTrigger, onDeleteSuccess }) {
   const [appointments, setAppointments] = useState([]);
-  const [servicesList, setServicesList] = useState([]);
+  const [filterServiceOptions, setFilterServiceOptions] = useState([]);
   
   // Filtros
   const [selectedService, setSelectedService] = useState('ALL');
@@ -12,26 +12,36 @@ export function AppointmentList({ refreshTrigger, onDeleteSuccess }) {
   
   // Paginação
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(20); // Inicial 20
+  const [pageSize, setPageSize] = useState(20);
 
   useEffect(() => {
     async function loadData() {
-      // Carrega serviços para o filtro dropdown
-      const services = await db.services.toArray();
-      setServicesList(services);
-
-      // Carrega cortes ordenados por data decrescente (mais recentes primeiro)
+      const activeServices = await db.services.toArray();
       const list = await db.appointments.reverse().sortBy('date');
       setAppointments(list);
+
+      // Consolida nomes dos serviços ativos + nomes dos serviços no histórico
+      const activeNames = activeServices.map(s => s.name);
+      
+      // Extrai nomes de serviços mesmo em combos (ex: "Cabelo + Barba" -> "Cabelo", "Barba")
+      const historicalNames = list.flatMap(item => {
+        if (!item.service_name) return [];
+        return item.service_name.split(' + ');
+      });
+
+      const uniqueNames = Array.from(new Set([...activeNames, ...historicalNames])).filter(Boolean);
+      setFilterServiceOptions(uniqueNames);
     }
     loadData();
   }, [refreshTrigger]);
 
   // Aplicação dos Filtros
   const filteredAppointments = appointments.filter((item) => {
-    // 1. Filtro de Serviço
-    if (selectedService !== 'ALL' && item.service_name !== selectedService) {
-      return false;
+    // 1. Filtro de Serviço (Verifica se o serviço selecionado faz parte do atendimento)
+    if (selectedService !== 'ALL') {
+      if (!item.service_name || !item.service_name.includes(selectedService)) {
+        return false;
+      }
     }
 
     // 2. Filtro de Data
@@ -63,7 +73,6 @@ export function AppointmentList({ refreshTrigger, onDeleteSuccess }) {
   const startIndex = (currentPage - 1) * pageSize;
   const paginatedAppointments = filteredAppointments.slice(startIndex, startIndex + pageSize);
 
-  // Exclusão de registro
   const handleDelete = async (id) => {
     if (window.confirm('Deseja realmente remover este registro de corte?')) {
       await db.appointments.delete(id);
@@ -102,8 +111,8 @@ export function AppointmentList({ refreshTrigger, onDeleteSuccess }) {
             style={styles.selectInput}
           >
             <option value="ALL">Todos os Serviços</option>
-            {servicesList.map((s) => (
-              <option key={s.id} value={s.name}>{s.name}</option>
+            {filterServiceOptions.map((serviceName, idx) => (
+              <option key={idx} value={serviceName}>{serviceName}</option>
             ))}
           </select>
         </div>
@@ -130,7 +139,7 @@ export function AppointmentList({ refreshTrigger, onDeleteSuccess }) {
                 <div style={styles.itemInfo}>
                   <div style={styles.itemHeader}>
                     <span style={styles.serviceName}>{item.service_name}</span>
-                    <span style={styles.itemPrice}>R$ {Number(item.price).toFixed(2)}</span>
+                    <span style={styles.itemPrice}>€ {Number(item.price).toFixed(2)}</span>
                   </div>
                   <div style={styles.itemMeta}>
                     <span style={styles.dateText}>{formattedDate}</span>
@@ -151,7 +160,7 @@ export function AppointmentList({ refreshTrigger, onDeleteSuccess }) {
         </div>
       )}
 
-      {/* BARRA DE PAGINAÇÃO E CONFIGURAÇÃO DE ITENS POR PÁGINA */}
+      {/* PAGINAÇÃO */}
       <div style={styles.paginationBar}>
         <div style={styles.pageSizeSelector}>
           <span style={styles.pageLabel}>Exibir:</span>
