@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { db } from '../services/db';
 import { 
   ShieldAlert, Share2, Database, CheckCircle, 
   Plus, Edit2, Trash2, Tag, Scissors, User, Zap, 
-  Smile, Sparkles, Palette, Sun, Waves, Coins, Star, Heart, X
+  Smile, Sparkles, Palette, Sun, Waves, Coins, Star, Heart, X,
+  Upload, AlertTriangle
 } from 'lucide-react';
 
 const AVAILABLE_ICONS = [
@@ -25,12 +26,15 @@ export function AdminPanel() {
   const [services, setServices] = useState([]);
   const [isExporting, setIsExporting] = useState(false);
   const [statusMessage, setStatusMessage] = useState('');
+  const [errorMessage, setErrorMessage] = useState('');
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [formName, setFormName] = useState('');
   const [formPrice, setFormPrice] = useState('');
   const [formIcon, setFormIcon] = useState('Scissors');
+
+  const fileInputRef = useRef(null);
 
   useEffect(() => {
     loadServices();
@@ -41,8 +45,10 @@ export function AdminPanel() {
     setServices(list);
   }
 
+  // EXPORTAR BACKUP
   const handleBackup = async () => {
     setStatusMessage('');
+    setErrorMessage('');
     setIsExporting(true);
 
     try {
@@ -91,10 +97,69 @@ export function AdminPanel() {
       setStatusMessage('Arquivo baixado na pasta "Downloads". Envie-o pelo WhatsApp.');
     } catch (error) {
       console.error("Erro no backup:", error);
-      alert('Erro ao acessar o banco para backup.');
+      setErrorMessage('Erro ao acessar o banco para backup.');
     } finally {
       setIsExporting(false);
     }
+  };
+
+  // RESTAURAR BACKUP
+  const handleRestoreFileSelect = (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    setStatusMessage('');
+    setErrorMessage('');
+
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      try {
+        const content = e.target.result;
+        const data = JSON.parse(content);
+
+        // Validação do formato do backup
+        if (!data || !Array.isArray(data.services) || !Array.isArray(data.appointments)) {
+          setErrorMessage('Arquivo de backup inválido! O JSON precisa conter as tabelas "services" e "appointments".');
+          return;
+        }
+
+        const confirmRestore = window.confirm(
+          `Atenção! A restauração irá substituir os dados atuais por:\n\n` +
+          `- ${data.services.length} serviços\n` +
+          `- ${data.appointments.length} atendimentos registrados\n\n` +
+          `Deseja realmente continuar?`
+        );
+
+        if (!confirmRestore) {
+          if (fileInputRef.current) fileInputRef.current.value = '';
+          return;
+        }
+
+        // Transação para substituir os dados de forma atômica no Dexie
+        await db.transaction('rw', db.services, db.appointments, async () => {
+          await db.services.clear();
+          await db.appointments.clear();
+
+          if (data.services.length > 0) {
+            await db.services.bulkPut(data.services);
+          }
+          if (data.appointments.length > 0) {
+            await db.appointments.bulkPut(data.appointments);
+          }
+        });
+
+        setStatusMessage('Banco de dados restaurado com sucesso!');
+        loadServices();
+
+      } catch (err) {
+        console.error('Erro ao ler arquivo de backup:', err);
+        setErrorMessage('Erro ao processar o arquivo JSON. Verifique se o arquivo está corrompido.');
+      } finally {
+        if (fileInputRef.current) fileInputRef.current.value = '';
+      }
+    };
+
+    reader.readAsText(file);
   };
 
   const handleOpenForm = (service = null) => {
@@ -173,7 +238,6 @@ export function AdminPanel() {
                   <div style={styles.iconCircle}>
                     <IconComp size={18} color="#E5A93C" />
                   </div>
-                  {/* Container ajustado com alinhamento explícito à esquerda */}
                   <div style={styles.serviceTextContainer}>
                     <div style={styles.serviceRowName}>{item.name}</div>
                     <div style={styles.serviceRowPrice}>€ {Number(item.price).toFixed(2)}</div>
@@ -194,14 +258,14 @@ export function AdminPanel() {
         </div>
       </div>
 
-      {/* SEÇÃO 2: BACKUP */}
+      {/* SEÇÃO 2: BACKUP E RESTAURAÇÃO */}
       <div style={styles.sectionCard}>
         <div style={styles.cardHeader}>
           <Database size={20} color="#38BDF8" />
-          <h3 style={styles.cardTitle}>Backup dos Dados</h3>
+          <h3 style={styles.cardTitle}>Backup e Restauração</h3>
         </div>
         <p style={styles.cardDescription}>
-          Gere uma cópia de segurança de todos os cortes e serviços para enviar via WhatsApp ou salvar no dispositivo.
+          Exporte uma cópia de segurança para o WhatsApp ou restaure os dados a partir de um arquivo JSON salvo anteriormente.
         </p>
 
         {statusMessage && (
@@ -210,12 +274,35 @@ export function AdminPanel() {
             <span>{statusMessage}</span>
           </div>
         )}
+
+        {errorMessage && (
+          <div style={styles.errorBox}>
+            <AlertTriangle size={16} color="#EF4444" />
+            <span>{errorMessage}</span>
+          </div>
+        )}
         
-        <button onClick={handleBackup} disabled={isExporting} style={styles.actionBtn}>
-          <span style={styles.btnContent}>
-            <Share2 size={18} /> Exportar Backup (WhatsApp)
-          </span>
-        </button>
+        <div style={styles.backupButtonsRow}>
+          <button onClick={handleBackup} disabled={isExporting} style={styles.actionBtn}>
+            <span style={styles.btnContent}>
+              <Share2 size={16} /> Exportar
+            </span>
+          </button>
+
+          <button onClick={() => fileInputRef.current && fileInputRef.current.click()} style={styles.restoreBtn}>
+            <span style={styles.btnContent}>
+              <Upload size={16} /> Restaurar JSON
+            </span>
+          </button>
+
+          <input 
+            type="file" 
+            ref={fileInputRef} 
+            onChange={handleRestoreFileSelect} 
+            accept=".json,application/json,text/plain" 
+            style={{ display: 'none' }} 
+          />
+        </div>
       </div>
 
       {/* MODAL / FORMULÁRIO DE CRIAR OU EDITAR SERVIÇO */}
@@ -445,12 +532,39 @@ const styles = {
     alignItems: 'center',
     gap: '8px',
   },
+  errorBox: {
+    backgroundColor: '#311212',
+    border: '1px solid #EF4444',
+    color: '#F87171',
+    padding: '10px 12px',
+    borderRadius: '8px',
+    fontSize: '12px',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+  },
+  backupButtonsRow: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(2, 1fr)',
+    gap: '10px',
+    marginTop: '4px',
+  },
   actionBtn: {
     backgroundColor: '#25231F',
     color: '#E5A93C',
     border: '1px solid #E5A93C',
     padding: '12px',
-    fontSize: '14px',
+    fontSize: '13px',
+    fontWeight: '600',
+    borderRadius: '10px',
+    cursor: 'pointer',
+  },
+  restoreBtn: {
+    backgroundColor: '#121214',
+    color: '#38BDF8',
+    border: '1px solid #38BDF8',
+    padding: '12px',
+    fontSize: '13px',
     fontWeight: '600',
     borderRadius: '10px',
     cursor: 'pointer',
@@ -459,7 +573,7 @@ const styles = {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: '8px',
+    gap: '6px',
   },
   modalOverlay: {
     position: 'fixed',
