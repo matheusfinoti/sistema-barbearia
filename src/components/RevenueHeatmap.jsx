@@ -1,14 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { db } from '../services/db';
-import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Flame } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Flame } from 'lucide-react';
 
 export function RevenueHeatmap({ refreshTrigger }) {
   const { t, i18n } = useTranslation();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [dailyData, setDailyData] = useState({});
   const [maxRevenue, setMaxRevenue] = useState(0);
-  const [selectedDayInfo, setSelectedDayInfo] = useState(null);
 
   useEffect(() => {
     loadMonthData();
@@ -51,7 +50,6 @@ export function RevenueHeatmap({ refreshTrigger }) {
 
       setDailyData(revenueByDay);
       setMaxRevenue(highestDayValue);
-      setSelectedDayInfo(null);
     } catch (err) {
       console.error('Erro ao carregar dados do heatmap:', err);
     }
@@ -86,13 +84,13 @@ export function RevenueHeatmap({ refreshTrigger }) {
       return '#121214';
     }
     const ratio = dayRevenue / maxRevenue;
-    const alpha = Math.max(0.25, Math.min(1, ratio));
+    const alpha = Math.max(0.3, Math.min(1, ratio));
     return `rgba(16, 185, 129, ${alpha.toFixed(2)})`;
   };
 
   return (
     <div style={styles.card}>
-      {/* CABEÇALHO COMPACTO */}
+      {/* CABEÇALHO */}
       <div style={styles.header}>
         <div style={styles.headerTitleGroup}>
           <Flame size={14} color="#10B981" />
@@ -101,11 +99,11 @@ export function RevenueHeatmap({ refreshTrigger }) {
 
         <div style={styles.navControls}>
           <button onClick={handlePrevMonth} style={styles.navBtn}>
-            <ChevronLeft size={14} color="#A1A1AA" />
+            <ChevronLeft size={12} color="#A1A1AA" />
           </button>
           <span style={styles.monthLabel}>{monthName}</span>
           <button onClick={handleNextMonth} style={styles.navBtn}>
-            <ChevronRight size={14} color="#A1A1AA" />
+            <ChevronRight size={12} color="#A1A1AA" />
           </button>
         </div>
       </div>
@@ -117,7 +115,7 @@ export function RevenueHeatmap({ refreshTrigger }) {
         ))}
       </div>
 
-      {/* GRADE REDUZIDA DE DIAS DO MÊS */}
+      {/* GRADE DOS DIAS COM VALOR E QUANTIDADE INTEGRADOS */}
       <div style={styles.daysGrid}>
         {Array.from({ length: firstDayOfWeek }).map((_, idx) => (
           <div key={`empty-${idx}`} style={styles.emptyCell} />
@@ -127,45 +125,34 @@ export function RevenueHeatmap({ refreshTrigger }) {
           const dayNumber = idx + 1;
           const dayInfo = dailyData[dayNumber] || { total: 0, count: 0 };
           const bgColor = getDayBackgroundColor(dayInfo.total);
-          const isSelected = selectedDayInfo?.day === dayNumber;
+          const hasData = dayInfo.total > 0;
 
           return (
-            <button
+            <div
               key={dayNumber}
-              onClick={() => setSelectedDayInfo({ day: dayNumber, ...dayInfo })}
               style={{
                 ...styles.dayCell,
                 backgroundColor: bgColor,
-                borderColor: isSelected ? '#E5A93C' : (dayInfo.total > 0 ? '#10B981' : '#2A2A36'),
-                borderWidth: isSelected ? '1.5px' : '1px',
-                color: dayInfo.total > 0 ? '#FFF' : '#52525B',
+                borderColor: hasData ? '#10B981' : '#2A2A36',
+                color: hasData ? '#FFF' : '#52525B',
               }}
             >
               <span style={styles.dayNumber}>{dayNumber}</span>
-            </button>
+              
+              {hasData && (
+                <>
+                  <span style={styles.cellRevenue}>
+                    €{dayInfo.total % 1 === 0 ? dayInfo.total : dayInfo.total.toFixed(0)}
+                  </span>
+                  <span style={styles.cellCount}>
+                    {dayInfo.count}x
+                  </span>
+                </>
+              )}
+            </div>
           );
         })}
       </div>
-
-      {/* DETALHE REDUZIDO AO TOCAR EM UM DIA */}
-      {selectedDayInfo && (
-        <div style={styles.detailBox}>
-          <div style={styles.detailHeader}>
-            <CalendarIcon size={12} color="#E5A93C" />
-            <span>Dia {selectedDayInfo.day}</span>
-          </div>
-          {selectedDayInfo.total > 0 ? (
-            <div style={styles.detailValues}>
-              <span style={styles.detailTotal}>€ {selectedDayInfo.total.toFixed(2)}</span>
-              <span style={styles.detailCount}>
-                ({selectedDayInfo.count})
-              </span>
-            </div>
-          ) : (
-            <span style={styles.noDataText}>{t('heatmap.no_data')}</span>
-          )}
-        </div>
-      )}
     </div>
   );
 }
@@ -173,7 +160,7 @@ export function RevenueHeatmap({ refreshTrigger }) {
 const styles = {
   card: {
     backgroundColor: '#1E1E26',
-    padding: '10px',
+    padding: '10px 8px',
     borderRadius: '12px',
     border: '1px solid #2A2A36',
     marginBottom: '12px',
@@ -185,6 +172,7 @@ const styles = {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
+    padding: '0 2px',
   },
   headerTitleGroup: {
     display: 'flex',
@@ -206,7 +194,7 @@ const styles = {
     backgroundColor: '#121214',
     border: '1px solid #2A2A36',
     borderRadius: '4px',
-    padding: '2px',
+    padding: '2px 4px',
     cursor: 'pointer',
     display: 'flex',
     alignItems: 'center',
@@ -236,57 +224,36 @@ const styles = {
     gap: '3px',
   },
   emptyCell: {
-    aspectRatio: '1',
+    minHeight: '38px',
   },
   dayCell: {
-    aspectRatio: '1',
-    borderRadius: '4px',
-    borderStyle: 'solid',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    cursor: 'pointer',
-    padding: 0,
-    transition: 'all 0.1s ease',
-  },
-  dayNumber: {
-    fontSize: '9px',
-    fontWeight: '600',
-  },
-  detailBox: {
-    backgroundColor: '#121214',
-    padding: '6px 8px',
+    minHeight: '38px',
     borderRadius: '6px',
     border: '1px solid #2A2A36',
     display: 'flex',
-    justifyContent: 'space-between',
+    flexDirection: 'column',
     alignItems: 'center',
-    marginTop: '2px',
+    justifyContent: 'center',
+    padding: '2px 1px',
+    boxSizing: 'border-box',
+    lineHeight: '1.1',
+    overflow: 'hidden',
   },
-  detailHeader: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '4px',
-    fontSize: '11px',
-    color: '#A1A1AA',
-  },
-  detailValues: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '4px',
-  },
-  detailTotal: {
-    fontSize: '12px',
+  dayNumber: {
+    fontSize: '8px',
     fontWeight: '700',
-    color: '#10B981',
+    opacity: 0.7,
   },
-  detailCount: {
-    fontSize: '11px',
-    color: '#71717A',
+  cellRevenue: {
+    fontSize: '9.5px',
+    fontWeight: '800',
+    color: '#FFF',
+    marginTop: '1px',
   },
-  noDataText: {
-    fontSize: '10px',
-    color: '#71717A',
-    fontStyle: 'italic',
+  cellCount: {
+    fontSize: '7.5px',
+    color: '#D1D5DB',
+    fontWeight: '600',
+    opacity: 0.85,
   },
 };
