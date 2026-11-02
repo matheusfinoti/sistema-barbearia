@@ -107,23 +107,24 @@ export function HaircutForm({ onSaveSuccess }) {
     
     if (selectedIds.length === 0) return alert(t('form.select_at_least_one'));
 
-    const selectedNames = services.filter(s => selectedItems.hasOwnProperty(s.id)).map(s => s.name).join(' + ');
+    // Monta o array detalhado de itens com ID, nome e preço individual
+    const detailedItems = services
+      .filter(s => selectedItems.hasOwnProperty(s.id))
+      .map(s => ({
+        serviceId: s.id,
+        name: s.name,
+        price: selectedItems[s.id]
+      }));
+
+    const selectedNames = detailedItems.map(i => i.name).join(' + ');
     const newAppointmentDate = new Date(date);
 
     try {
-      const lastAppointment = await db.appointments.orderBy('date').last();
-      if (lastAppointment) {
-        const lastDate = new Date(lastAppointment.date);
-        if (newAppointmentDate < new Date(lastDate.getTime() - 86400000)) {
-          if (!window.confirm(t('form.date_warning'))) return;
-        }
-      }
-
       await db.appointments.add({
         date: newAppointmentDate.toISOString(),
-        service_id: Number(selectedIds[0]),
         service_name: selectedNames,
         price: totalPrice,
+        items: detailedItems, // Salva o detalhamento estruturado
         notes: notes,
       });
 
@@ -135,11 +136,7 @@ export function HaircutForm({ onSaveSuccess }) {
       if (onSaveSuccess) onSaveSuccess();
     } catch (error) {
       console.error('Erro ao salvar corte:', error);
-      if (error.name === 'QuotaExceededError') {
-        setErrorMessage(t('form.quota_error'));
-      } else {
-        setErrorMessage(t('form.save_error'));
-      }
+      setErrorMessage(t('form.save_error'));
     }
   };
 
@@ -222,13 +219,7 @@ export function HaircutForm({ onSaveSuccess }) {
 }
 
 const styles = {
-  container: {
-    width: '100%',
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '16px',
-    boxSizing: 'border-box',
-  },
+  container: { width: '100%', display: 'flex', flexDirection: 'column', gap: '16px', boxSizing: 'border-box' },
   toast: { position: 'fixed', top: '20px', left: '50%', transform: 'translateX(-50%)', backgroundColor: '#1E293B', color: '#F8FAFC', padding: '12px 20px', borderRadius: '30px', border: '1px solid #10B981', display: 'flex', alignItems: 'center', gap: '10px', boxShadow: '0 10px 25px rgba(0,0,0,0.5)', zIndex: 9999, fontSize: '14px', fontWeight: '500' },
   errorBox: { backgroundColor: '#311212', border: '1px solid #EF4444', color: '#F87171', padding: '12px 16px', borderRadius: '10px', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13px' },
   form: { display: 'flex', flexDirection: 'column', gap: '16px', width: '100%', boxSizing: 'border-box' },

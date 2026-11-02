@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { db } from '../services/db';
-import { Filter, Trash2, ChevronLeft, ChevronRight, Calendar, Search } from 'lucide-react';
+import { Filter, Trash2, Edit2, ChevronLeft, ChevronRight, Calendar, Search, X, Check } from 'lucide-react';
 
 export function AppointmentList({ refreshTrigger, onDeleteSuccess }) {
   const { t, i18n } = useTranslation();
@@ -12,9 +12,20 @@ export function AppointmentList({ refreshTrigger, onDeleteSuccess }) {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
 
+  // Estado do Modal de Edição
+  const [editingAppointment, setEditingAppointment] = useState(null);
+  const [editItems, setEditItems] = useState([]); // Agora mantemos uma lista estruturada para edição limpa
+  const [editDate, setEditDate] = useState('');
+  const [editNotes, setEditNotes] = useState('');
+  const [availableServices, setAvailableServices] = useState([]);
+
+  // Idioma atual para traduções dinâmicas
+  const lang = i18n.language?.slice(0, 2) || 'es';
+
   useEffect(() => {
     async function loadData() {
       const activeServices = await db.services.toArray();
+      setAvailableServices(activeServices);
       const list = await db.appointments.reverse().sortBy('date');
       setAppointments(list);
       const activeNames = activeServices.map(s => s.name);
@@ -23,6 +34,59 @@ export function AppointmentList({ refreshTrigger, onDeleteSuccess }) {
     }
     loadData();
   }, [refreshTrigger]);
+
+  const handleOpenEdit = (item) => {
+    setEditingAppointment(item);
+    setEditDate(item.date ? new Date(item.date).toISOString().slice(0, 16) : '');
+    setEditNotes(item.notes || '');
+
+    // Garante que trazemos os itens detalhados corretamente com seus nomes legíveis
+    if (item.items && Array.isArray(item.items) && item.items.length > 0) {
+      setEditItems(item.items.map(i => ({ name: i.name, price: Number(i.price) || 0 })));
+    } else {
+      // Fallback para itens antigos salvos apenas como texto consolidado
+      setEditItems([{ name: item.service_name || 'Serviço', price: Number(item.price) || 0 }]);
+    }
+  };
+
+  const handleEditPriceChange = (index, val) => {
+    const updated = [...editItems];
+    updated[index].price = Number(val);
+    setEditItems(updated);
+  };
+
+  const handleSaveEdit = async (e) => {
+    e.preventDefault();
+    if (!editingAppointment) return;
+
+    let totalPrice = 0;
+    const detailedItems = editItems.map(i => {
+      totalPrice += i.price;
+      return {
+        name: i.name,
+        price: i.price
+      };
+    });
+
+    const updatedServiceNames = detailedItems.map(i => i.name).join(' + ');
+
+    try {
+      await db.appointments.update(editingAppointment.id, {
+        date: new Date(editDate).toISOString(),
+        service_name: updatedServiceNames,
+        price: totalPrice,
+        items: detailedItems,
+        notes: editNotes
+      });
+
+      setEditingAppointment(null);
+      const list = await db.appointments.reverse().sortBy('date');
+      setAppointments(list);
+      if (onDeleteSuccess) onDeleteSuccess();
+    } catch (err) {
+      console.error('Erro ao atualizar atendimento:', err);
+    }
+  };
 
   const filteredAppointments = appointments.filter((item) => {
     if (selectedService !== 'ALL' && (!item.service_name || !item.service_name.includes(selectedService))) return false;
@@ -40,10 +104,20 @@ export function AppointmentList({ refreshTrigger, onDeleteSuccess }) {
   const paginatedAppointments = filteredAppointments.slice(startIndex, startIndex + pageSize);
 
   const handleDelete = async (id) => {
-    if (window.confirm(t('list.delete_confirm'))) { await db.appointments.delete(id); if (onDeleteSuccess) onDeleteSuccess(); }
+    const confirmMsg = lang === 'pt' ? 'Deseja realmente excluir este atendimento?' : (lang === 'en' ? 'Are you sure you want to delete this appointment?' : '¿Realmente deseas eliminar esta cita?');
+    if (window.confirm(confirmMsg)) { await db.appointments.delete(id); if (onDeleteSuccess) onDeleteSuccess(); }
   };
 
-  const getLocaleCode = () => { const lang = i18n.language?.slice(0, 2); return lang === 'en' ? 'en-US' : (lang === 'pt' ? 'pt-BR' : 'es-ES'); };
+  const getLocaleCode = () => { return lang === 'en' ? 'en-US' : (lang === 'pt' ? 'pt-BR' : 'es-ES'); };
+
+  // Textos multilíngues localizados para o Modal de Edição
+  const modalTexts = {
+    title: lang === 'pt' ? 'Editar Atendimento' : (lang === 'en' ? 'Edit Appointment' : 'Editar Cita'),
+    datetime: lang === 'pt' ? 'Data e Hora' : (lang === 'en' ? 'Date & Time' : 'Fecha y Hora'),
+    servicesValues: lang === 'pt' ? 'Valores dos Serviços' : (lang === 'en' ? 'Service Prices' : 'Valores de los Servicios'),
+    notes: lang === 'pt' ? 'Observações' : (lang === 'en' ? 'Notes' : 'Observaciones'),
+    save: lang === 'pt' ? 'Salvar Alterações' : (lang === 'en' ? 'Save Changes' : 'Guardar Cambios')
+  };
 
   return (
     <div style={styles.container}>
@@ -87,10 +161,60 @@ export function AppointmentList({ refreshTrigger, onDeleteSuccess }) {
                     {item.notes && <span style={styles.notesText}>• {item.notes}</span>}
                   </div>
                 </div>
-                <button onClick={() => handleDelete(item.id)} style={styles.deleteBtn}><Trash2 size={16} color="#EF4444" /></button>
+                <div style={styles.actionButtonsRow}>
+                  <button onClick={() => handleOpenEdit(item)} style={styles.iconBtn}><Edit2 size={16} color="#38BDF8" /></button>
+                  <button onClick={() => handleDelete(item.id)} style={styles.iconBtn}><Trash2 size={16} color="#EF4444" /></button>
+                </div>
               </div>
             );
           })}
+        </div>
+      )}
+
+      {/* MODAL DE EDIÇÃO DO ATENDIMENTO */}
+      {editingAppointment && (
+        <div style={styles.modalOverlay}>
+          <div style={styles.modalBody}>
+            <div style={styles.modalHeader}>
+              <h3 style={styles.modalTitle}>{modalTexts.title}</h3>
+              <button onClick={() => setEditingAppointment(null)} style={styles.closeBtn}><X size={20} color="#A1A1AA" /></button>
+            </div>
+            
+            <form onSubmit={handleSaveEdit} style={styles.modalForm}>
+              <div style={styles.inputGroup}>
+                <label style={styles.inputLabel}>{modalTexts.datetime}</label>
+                <input type="datetime-local" value={editDate} onChange={(e) => setEditDate(e.target.value)} required style={styles.textInput} />
+              </div>
+
+              <div style={styles.inputGroup}>
+                <label style={styles.inputLabel}>{modalTexts.servicesValues}</label>
+                {editItems.map((item, idx) => (
+                  <div key={idx} style={styles.editServiceRow}>
+                    <span style={styles.editServiceName}>{item.name}</span>
+                    <div style={styles.editPriceWrapper}>
+                      <span>€</span>
+                      <input 
+                        type="number" 
+                        step="0.5" 
+                        value={item.price} 
+                        onChange={(e) => handleEditPriceChange(idx, e.target.value)} 
+                        style={styles.numberInput} 
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div style={styles.inputGroup}>
+                <label style={styles.inputLabel}>{modalTexts.notes}</label>
+                <input type="text" value={editNotes} onChange={(e) => setEditNotes(e.target.value)} style={styles.textInput} />
+              </div>
+
+              <button type="submit" style={styles.saveSubmitBtn}>
+                <Check size={18} /> {modalTexts.save}
+              </button>
+            </form>
+          </div>
         </div>
       )}
 
@@ -119,7 +243,7 @@ const styles = {
   filterCard: { backgroundColor: '#1E1E26', padding: '12px', borderRadius: '12px', border: '1px solid #2A2A36', display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px', width: '100%', boxSizing: 'border-box' },
   filterGroup: { display: 'flex', flexDirection: 'column', gap: '4px', overflow: 'hidden' },
   filterLabel: { fontSize: '11px', color: '#A1A1AA', display: 'flex', alignItems: 'center', gap: '4px' },
-  selectInput: { backgroundColor: '#121214', border: '1px solid #3F3F46', color: '#FFF', padding: '8px', borderRadius: '6px', fontSize: '13px', width: '100%', boxSizing: 'border-box', textOverflow: 'ellipsis' },
+  selectInput: { backgroundColor: '#121214', border: '1px solid #3F3F46', color: '#FFF', padding: '8px', borderRadius: '6px', fontSize: '13px', width: '100%', boxSizing: 'border-box' },
   list: { display: 'flex', flexDirection: 'column', gap: '8px', width: '100%' },
   listItem: { backgroundColor: '#1E1E26', padding: '12px', borderRadius: '10px', border: '1px solid #2A2A36', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', width: '100%', boxSizing: 'border-box' },
   itemInfo: { display: 'flex', flexDirection: 'column', gap: '4px', flex: 1, minWidth: 0 },
@@ -129,7 +253,8 @@ const styles = {
   itemMeta: { display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: '#71717A', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' },
   dateText: { color: '#A1A1AA' },
   notesText: { color: '#71717A', fontStyle: 'italic', overflow: 'hidden', textOverflow: 'ellipsis' },
-  deleteBtn: { backgroundColor: 'transparent', border: 'none', cursor: 'pointer', padding: '6px', flexShrink: 0 },
+  actionButtonsRow: { display: 'flex', alignItems: 'center', gap: '2px', flexShrink: 0 },
+  iconBtn: { backgroundColor: 'transparent', border: 'none', cursor: 'pointer', padding: '6px', borderRadius: '6px' },
   emptyState: { padding: '30px', textAlign: 'center', color: '#71717A', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', fontSize: '13px' },
   paginationBar: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#1E1E26', padding: '10px 14px', borderRadius: '10px', border: '1px solid #2A2A36', width: '100%', boxSizing: 'border-box' },
   pageSizeSelector: { display: 'flex', alignItems: 'center', gap: '6px' },
@@ -138,4 +263,19 @@ const styles = {
   pageControls: { display: 'flex', alignItems: 'center', gap: '10px' },
   pageIndicator: { fontSize: '12px', color: '#FFF', fontWeight: '600' },
   pageBtn: { backgroundColor: '#2A2A36', color: '#FFF', border: 'none', borderRadius: '6px', padding: '4px 8px', display: 'flex', alignItems: 'center' },
+  
+  modalOverlay: { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0, 0, 0, 0.75)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px', zIndex: 9999 },
+  modalBody: { backgroundColor: '#1E1E26', borderRadius: '14px', border: '1px solid #2A2A36', width: '100%', maxWidth: '400px', padding: '16px' },
+  modalHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' },
+  modalTitle: { fontSize: '16px', fontWeight: '700', color: '#FFF', margin: 0 },
+  closeBtn: { backgroundColor: 'transparent', border: 'none', cursor: 'pointer' },
+  modalForm: { display: 'flex', flexDirection: 'column', gap: '12px' },
+  inputGroup: { display: 'flex', flexDirection: 'column', gap: '6px' },
+  inputLabel: { fontSize: '12px', color: '#A1A1AA', fontWeight: '600' },
+  textInput: { backgroundColor: '#121214', border: '1px solid #3F3F46', color: '#FFF', padding: '10px', borderRadius: '8px', fontSize: '14px', width: '100%', boxSizing: 'border-box' },
+  editServiceRow: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#121214', padding: '8px 10px', borderRadius: '8px', border: '1px solid #2A2A36' },
+  editServiceName: { fontSize: '13px', color: '#FFF', fontWeight: '500' },
+  editPriceWrapper: { display: 'flex', alignItems: 'center', gap: '4px', color: '#E5A93C', fontWeight: '700' },
+  numberInput: { backgroundColor: '#1E1E26', border: '1px solid #3F3F46', color: '#E5A93C', padding: '6px', borderRadius: '6px', fontSize: '13px', fontWeight: '700', width: '70px', textAlign: 'right' },
+  saveSubmitBtn: { backgroundColor: '#E5A93C', color: '#121214', border: 'none', padding: '12px', fontSize: '14px', fontWeight: '700', borderRadius: '8px', cursor: 'pointer', marginTop: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }
 };
