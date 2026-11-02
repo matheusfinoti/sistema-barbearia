@@ -1,18 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { db } from '../services/db';
-import { Euro, Calendar, Users, TrendingUp, RefreshCcw, Star, Target } from 'lucide-react';
+import { Euro, Users, TrendingUp, RefreshCcw, Star, Target } from 'lucide-react';
 
 export function DashboardMetrics({ refreshTrigger, calendarDate }) {
   const { t, i18n } = useTranslation();
   
   // Controles de Clique (0 = Hoje, 1 = Semana Atual, 2 = Mês)
   const [periodIndex, setPeriodIndex] = useState(0); 
+  // Agora alternando apenas entre 2 estados: 0 = Top Serviço, 1 = Projeção Mês
   const [topRightIndex, setTopRightIndex] = useState(0); 
   const [bottomRightIndex, setBottomRightIndex] = useState(0); 
   
   const [metrics, setMetrics] = useState({
-    calMonthRevenue: 0, 
     dynamicRevenue: 0, 
     dynamicCuts: 0,
     topServiceName: '',
@@ -101,7 +101,6 @@ export function DashboardMetrics({ refreshTrigger, calendarDate }) {
         }
 
         setMetrics({
-          calMonthRevenue: calMonthRev,
           dynamicRevenue: dynRev,
           dynamicCuts: dynCuts,
           topServiceName: topName,
@@ -117,22 +116,22 @@ export function DashboardMetrics({ refreshTrigger, calendarDate }) {
   }, [refreshTrigger, calendarDate, periodIndex]);
 
   const togglePeriod = () => setPeriodIndex(prev => (prev + 1) % 3);
-  const toggleTopRight = () => setTopRightIndex(prev => (prev + 1) % 3);
+  // Alterna apenas entre 0 e 1 (Top Serviço e Projeção Mês)
+  const toggleTopRight = () => setTopRightIndex(prev => (prev + 1) % 2);
   const toggleBottomRight = () => setBottomRightIndex(prev => (prev + 1) % 2);
 
   const lang = i18n.language?.slice(0, 2);
   const labelRev = lang === 'pt' ? 'Faturamento' : (lang === 'en' ? 'Revenue' : 'Facturación');
   const labelSrv = lang === 'pt' ? 'Serviços' : (lang === 'en' ? 'Services' : 'Servicios');
   
-  // Rótulo dinâmico atualizado para "Esta Semana"
   const periodLabels = [
     t('list.period_today'), 
     lang === 'pt' ? 'Esta Semana' : (lang === 'en' ? 'This Week' : 'Esta Semana'), 
     t('list.period_month')
   ];
   
+  // Títulos limitados às 2 opções solicitadas
   const trTitles = [
-    t('metrics.month_revenue'), 
     lang === 'pt' ? 'Top Serviço' : (lang === 'en' ? 'Top Service' : 'Top Servicio'), 
     lang === 'pt' ? 'Projeção Mês' : (lang === 'en' ? 'Forecast' : 'Proyección Mes')
   ];
@@ -169,14 +168,12 @@ export function DashboardMetrics({ refreshTrigger, calendarDate }) {
         <div style={styles.smallCard} onClick={toggleTopRight}>
           <div style={styles.smallCardHeader}>
             <span style={styles.smallCardTitle}>{trTitles[topRightIndex]}</span>
-            {topRightIndex === 0 && <Calendar size={14} color="#38BDF8" />}
-            {topRightIndex === 1 && <Star size={14} color="#E5A93C" />}
-            {topRightIndex === 2 && <Target size={14} color="#10B981" />}
+            {topRightIndex === 0 && <Star size={14} color="#E5A93C" />}
+            {topRightIndex === 1 && <Target size={14} color="#10B981" />}
           </div>
           <div style={styles.smallCardValue}>
-            {topRightIndex === 0 && `€ ${metrics.calMonthRevenue.toFixed(2)}`}
-            {topRightIndex === 1 && (metrics.topServiceCount > 0 ? `${metrics.topServiceName} (${metrics.topServiceCount}x)` : '-')}
-            {topRightIndex === 2 && `€ ${metrics.forecast.toFixed(2)}`}
+            {topRightIndex === 0 && (metrics.topServiceCount > 0 ? `${metrics.topServiceName} (${metrics.topServiceCount}x)` : '-')}
+            {topRightIndex === 1 && `€ ${metrics.forecast.toFixed(2)}`}
           </div>
         </div>
 
