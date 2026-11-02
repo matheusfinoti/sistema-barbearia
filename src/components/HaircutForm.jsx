@@ -1,22 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { db } from '../services/db';
-import { 
-  Scissors, User, Zap, Smile, Sparkles, 
-  Palette, Sun, Waves, Coins, Check, Clock, FileText, Tag, AlertTriangle 
-} from 'lucide-react';
+import { Scissors, User, Zap, Smile, Sparkles, Palette, Sun, Waves, Coins, Check, Clock, FileText, Tag, AlertTriangle } from 'lucide-react';
 
-const iconMap = {
-  Scissors: Scissors,
-  User: User,
-  Zap: Zap,
-  Smile: Smile,
-  Sparkles: Sparkles,
-  Palette: Palette,
-  Sun: Sun,
-  Waves: Waves,
-  Coins: Coins,
-};
+const iconMap = { Scissors: Scissors, User: User, Zap: Zap, Smile: Smile, Sparkles: Sparkles, Palette: Palette, Sun: Sun, Waves: Waves, Coins: Coins };
 
 const DEFAULT_SERVICES = [
   { id: 1, name: 'Cabelo', price: 20, icon_name: 'Scissors', is_active: 1 },
@@ -33,10 +20,8 @@ const DEFAULT_SERVICES = [
 function getRoundedCurrentDateTime() {
   const now = new Date();
   const minutes = now.getMinutes();
-  const roundedMinutes = Math.round(minutes / 10) * 10;
-  now.setMinutes(roundedMinutes);
+  now.setMinutes(Math.round(minutes / 10) * 10);
   now.setSeconds(0);
-  
   const tzOffset = now.getTimezoneOffset() * 60000;
   return (new Date(now.getTime() - tzOffset)).toISOString().slice(0, 16);
 }
@@ -46,7 +31,6 @@ export function HaircutForm({ onSaveSuccess }) {
   const [services, setServices] = useState([]);
   const [selectedItems, setSelectedItems] = useState({});
   const [activeComboMsg, setActiveComboMsg] = useState('');
-  
   const [date, setDate] = useState(getRoundedCurrentDateTime());
   const [notes, setNotes] = useState('');
   const [savedToast, setSavedToast] = useState(false);
@@ -61,11 +45,8 @@ export function HaircutForm({ onSaveSuccess }) {
           list = DEFAULT_SERVICES;
         }
         setServices(list);
-        
         const cabeloItem = list.find(s => s.name === 'Cabelo') || list[0];
-        if (cabeloItem) {
-          setSelectedItems({ [cabeloItem.id]: cabeloItem.price });
-        }
+        if (cabeloItem) setSelectedItems({ [cabeloItem.id]: cabeloItem.price });
       } catch (err) {
         console.error('Erro ao carregar serviços:', err);
         setErrorMessage(t('form.db_error'));
@@ -77,7 +58,6 @@ export function HaircutForm({ onSaveSuccess }) {
   const handleToggleService = (service) => {
     const isSelected = selectedItems.hasOwnProperty(service.id);
     let updated = { ...selectedItems };
-
     if (isSelected) {
       delete updated[service.id];
     } else {
@@ -93,13 +73,11 @@ export function HaircutForm({ onSaveSuccess }) {
     const hasBarba = barbaObj && updated.hasOwnProperty(barbaObj.id);
 
     let comboBanner = '';
-
     if (hasCabelo && hasBarba) {
       updated[cabeloObj.id] = 16;
       updated[barbaObj.id] = 14;
       comboBanner = t('form.combo_cabelo_barba');
-    } 
-    else if (hasRapado && hasBarba) {
+    } else if (hasRapado && hasBarba) {
       updated[rapadoObj.id] = 11;
       updated[barbaObj.id] = 14;
       comboBanner = t('form.combo_rapado_barba');
@@ -110,10 +88,7 @@ export function HaircutForm({ onSaveSuccess }) {
   };
 
   const handlePriceChange = (serviceId, newPrice) => {
-    setSelectedItems(prev => ({
-      ...prev,
-      [serviceId]: Number(newPrice)
-    }));
+    setSelectedItems(prev => ({ ...prev, [serviceId]: Number(newPrice) }));
   };
 
   const adjustMinutes = (deltaMinutes) => {
@@ -130,15 +105,9 @@ export function HaircutForm({ onSaveSuccess }) {
     setErrorMessage('');
     const selectedIds = Object.keys(selectedItems);
     
-    if (selectedIds.length === 0) {
-      return alert(t('form.select_at_least_one'));
-    }
+    if (selectedIds.length === 0) return alert(t('form.select_at_least_one'));
 
-    const selectedNames = services
-      .filter(s => selectedItems.hasOwnProperty(s.id))
-      .map(s => s.name)
-      .join(' + ');
-
+    const selectedNames = services.filter(s => selectedItems.hasOwnProperty(s.id)).map(s => s.name).join(' + ');
     const newAppointmentDate = new Date(date);
 
     try {
@@ -146,9 +115,7 @@ export function HaircutForm({ onSaveSuccess }) {
       if (lastAppointment) {
         const lastDate = new Date(lastAppointment.date);
         if (newAppointmentDate < new Date(lastDate.getTime() - 86400000)) {
-          if (!window.confirm(t('form.date_warning'))) {
-            return;
-          }
+          if (!window.confirm(t('form.date_warning'))) return;
         }
       }
 
@@ -166,7 +133,6 @@ export function HaircutForm({ onSaveSuccess }) {
       setNotes('');
       setDate(getRoundedCurrentDateTime());
       if (onSaveSuccess) onSaveSuccess();
-
     } catch (error) {
       console.error('Erro ao salvar corte:', error);
       if (error.name === 'QuotaExceededError') {
@@ -179,17 +145,8 @@ export function HaircutForm({ onSaveSuccess }) {
 
   return (
     <div style={styles.container}>
-      {savedToast && (
-        <div style={styles.toast}>
-          <Check size={20} color="#10B981" /> {t('form.toast_success')}
-        </div>
-      )}
-
-      {errorMessage && (
-        <div style={styles.errorBox}>
-          <AlertTriangle size={20} color="#EF4444" /> {errorMessage}
-        </div>
-      )}
+      {savedToast && <div style={styles.toast}><Check size={20} color="#10B981" /> {t('form.toast_success')}</div>}
+      {errorMessage && <div style={styles.errorBox}><AlertTriangle size={20} color="#EF4444" /> {errorMessage}</div>}
 
       <form onSubmit={handleSubmit} style={styles.form}>
         <div style={styles.header}>
@@ -197,19 +154,9 @@ export function HaircutForm({ onSaveSuccess }) {
           <span style={styles.subtitle}>{t('form.subtitle')}</span>
         </div>
 
-        {/* 1º CAMPO: DATA E HORA */}
         <div style={styles.sectionCard}>
-          <label style={styles.label}>
-            <Clock size={16} color="#E5A93C" /> {t('form.step1')}
-          </label>
-          <input 
-            type="datetime-local" 
-            step="600" 
-            value={date} 
-            onChange={(e) => setDate(e.target.value)} 
-            required 
-            style={styles.dateTimeInput}
-          />
+          <label style={styles.label}><Clock size={16} color="#E5A93C" /> {t('form.step1')}</label>
+          <input type="datetime-local" step="600" value={date} onChange={(e) => setDate(e.target.value)} required style={styles.dateTimeInput} />
           <div style={styles.quickTimeBar}>
             <button type="button" onClick={() => setDate(getRoundedCurrentDateTime())} style={styles.chipBtn}>{t('form.now')}</button>
             <button type="button" onClick={() => adjustMinutes(-10)} style={styles.chipBtn}>-10 min</button>
@@ -218,78 +165,38 @@ export function HaircutForm({ onSaveSuccess }) {
           </div>
         </div>
 
-        {/* 2º CAMPO: GRADE DE SERVIÇOS */}
         <div style={styles.sectionCard}>
-          <label style={styles.label}>
-            <Tag size={16} color="#E5A93C" /> {t('form.step2')}
-          </label>
-
-          {activeComboMsg && (
-            <div style={styles.comboBanner}>
-              <Sparkles size={16} color="#E5A93C" /> {activeComboMsg}
-            </div>
-          )}
-
+          <label style={styles.label}><Tag size={16} color="#E5A93C" /> {t('form.step2')}</label>
+          {activeComboMsg && <div style={styles.comboBanner}><Sparkles size={16} color="#E5A93C" /> {activeComboMsg}</div>}
           <div style={styles.grid3x3}>
             {services.map((service) => {
               const IconComponent = iconMap[service.icon_name] || Scissors;
               const isSelected = selectedItems.hasOwnProperty(service.id);
-
               return (
                 <button
                   type="button"
                   key={service.id}
                   onClick={() => handleToggleService(service)}
-                  style={{
-                    ...styles.card,
-                    borderColor: isSelected ? '#E5A93C' : '#2A2A36',
-                    backgroundColor: isSelected ? '#25231F' : '#121214',
-                    boxShadow: isSelected ? '0 0 10px rgba(229, 169, 60, 0.25)' : 'none',
-                  }}
+                  style={{...styles.card, borderColor: isSelected ? '#E5A93C' : '#2A2A36', backgroundColor: isSelected ? '#25231F' : '#121214', boxShadow: isSelected ? '0 0 10px rgba(229, 169, 60, 0.25)' : 'none'}}
                 >
-                  <div style={{
-                    ...styles.iconCircle,
-                    backgroundColor: isSelected ? '#E5A93C' : '#2A2A36',
-                    color: isSelected ? '#121214' : '#A1A1AA',
-                  }}>
-                    <IconComponent size={20} />
-                  </div>
-                  <span style={{
-                    ...styles.cardName,
-                    color: isSelected ? '#FFF' : '#A1A1AA',
-                    fontWeight: isSelected ? '700' : '400',
-                  }}>
-                    {service.name}
-                  </span>
-                  <span style={styles.cardPrice}>
-                    € {isSelected ? selectedItems[service.id] : service.price}
-                  </span>
+                  <div style={{...styles.iconCircle, backgroundColor: isSelected ? '#E5A93C' : '#2A2A36', color: isSelected ? '#121214' : '#A1A1AA'}}><IconComponent size={20} /></div>
+                  <span style={{...styles.cardName, color: isSelected ? '#FFF' : '#A1A1AA', fontWeight: isSelected ? '700' : '400'}}>{service.name}</span>
+                  <span style={styles.cardPrice}>€ {isSelected ? selectedItems[service.id] : service.price}</span>
                 </button>
               );
             })}
           </div>
 
-          {/* SLIDERS DE AJUSTE INDIVIDUAL */}
           {Object.keys(selectedItems).length > 0 && (
             <div style={styles.priceSlidersBox}>
               <span style={styles.sliderBoxTitle}>{t('form.adjust_price')}</span>
-              {services
-                .filter(s => selectedItems.hasOwnProperty(s.id))
-                .map((service) => (
+              {services.filter(s => selectedItems.hasOwnProperty(s.id)).map((service) => (
                   <div key={service.id} style={styles.singleSliderRow}>
                     <div style={styles.sliderHeader}>
                       <span style={styles.sliderServiceName}>{service.name}</span>
                       <span style={styles.sliderValueText}>€ {selectedItems[service.id]}</span>
                     </div>
-                    <input 
-                      type="range" 
-                      min="0" 
-                      max="120" 
-                      step="1" 
-                      value={selectedItems[service.id]} 
-                      onChange={(e) => handlePriceChange(service.id, e.target.value)}
-                      style={styles.sliderInput}
-                    />
+                    <input type="range" min="0" max="120" step="1" value={selectedItems[service.id]} onChange={(e) => handlePriceChange(service.id, e.target.value)} style={styles.sliderInput} />
                   </div>
                 ))}
             </div>
@@ -301,18 +208,9 @@ export function HaircutForm({ onSaveSuccess }) {
           </div>
         </div>
 
-        {/* 3º CAMPO: OBSERVAÇÃO */}
         <div style={styles.sectionCard}>
-          <label style={styles.label}>
-            <FileText size={16} color="#A1A1AA" /> {t('form.step3')}
-          </label>
-          <input 
-            type="text" 
-            value={notes} 
-            onChange={(e) => setNotes(e.target.value)} 
-            placeholder={t('form.placeholder_notes')} 
-            style={styles.textInput}
-          />
+          <label style={styles.label}><FileText size={16} color="#A1A1AA" /> {t('form.step3')}</label>
+          <input type="text" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder={t('form.placeholder_notes')} style={styles.textInput} />
         </div>
 
         <button type="submit" style={styles.submitBtn}>
@@ -325,241 +223,38 @@ export function HaircutForm({ onSaveSuccess }) {
 
 const styles = {
   container: {
-    maxWidth: '480px',
-    margin: '0 auto',
-    padding: '16px',
-    backgroundColor: '#121214',
-    minHeight: '100vh',
-    color: '#F4F4F5',
-    fontFamily: 'system-ui, -apple-system, sans-serif',
-    boxSizing: 'border-box',
-  },
-  toast: {
-    position: 'fixed',
-    top: '20px',
-    left: '50%',
-    transform: 'translateX(-50%)',
-    backgroundColor: '#1E293B',
-    color: '#F8FAFC',
-    padding: '12px 20px',
-    borderRadius: '30px',
-    border: '1px solid #10B981',
-    display: 'flex',
-    alignItems: 'center',
-    gap: '10px',
-    boxShadow: '0 10px 25px rgba(0,0,0,0.5)',
-    zIndex: 9999,
-    fontSize: '14px',
-    fontWeight: '500',
-  },
-  errorBox: {
-    backgroundColor: '#311212',
-    border: '1px solid #EF4444',
-    color: '#F87171',
-    padding: '12px 16px',
-    borderRadius: '10px',
-    marginBottom: '12px',
-    display: 'flex',
-    alignItems: 'center',
-    gap: '10px',
-    fontSize: '13px',
-  },
-  form: {
+    width: '100%',
     display: 'flex',
     flexDirection: 'column',
     gap: '16px',
-    width: '100%',
     boxSizing: 'border-box',
   },
-  header: {
-    marginBottom: '2px',
-  },
-  title: {
-    fontSize: '22px',
-    fontWeight: '700',
-    margin: '0',
-    color: '#FFF',
-  },
-  subtitle: {
-    fontSize: '13px',
-    color: '#A1A1AA',
-  },
-  sectionCard: {
-    backgroundColor: '#1E1E26',
-    padding: '16px',
-    borderRadius: '14px',
-    border: '1px solid #2A2A36',
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '12px',
-    boxSizing: 'border-box',
-    width: '100%',
-    overflow: 'hidden',
-  },
-  label: {
-    fontSize: '13px',
-    color: '#A1A1AA',
-    display: 'flex',
-    alignItems: 'center',
-    gap: '6px',
-    fontWeight: '600',
-  },
-  dateTimeInput: {
-    backgroundColor: '#121214',
-    border: '1px solid #3F3F46',
-    color: '#FFF',
-    padding: '12px',
-    borderRadius: '8px',
-    fontSize: '15px',
-    width: '100%',
-    maxWidth: '100%',
-    boxSizing: 'border-box',
-    minWidth: 0,
-    WebkitAppearance: 'none',
-  },
-  quickTimeBar: {
-    display: 'flex',
-    gap: '8px',
-  },
-  chipBtn: {
-    flex: 1,
-    padding: '8px 0',
-    backgroundColor: '#2A2A36',
-    color: '#D4D4D8',
-    border: 'none',
-    borderRadius: '6px',
-    fontSize: '12px',
-    cursor: 'pointer',
-    fontWeight: '500',
-  },
-  comboBanner: {
-    backgroundColor: '#25231F',
-    border: '1px solid #E5A93C',
-    color: '#E5A93C',
-    padding: '10px 12px',
-    borderRadius: '8px',
-    fontSize: '12px',
-    fontWeight: '600',
-    display: 'flex',
-    alignItems: 'center',
-    gap: '8px',
-  },
-  grid3x3: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(3, 1fr)',
-    gap: '10px',
-  },
-  card: {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    padding: '10px 4px',
-    borderRadius: '10px',
-    border: '1.5px solid #2A2A36',
-    cursor: 'pointer',
-    transition: 'all 0.15s ease',
-  },
-  iconCircle: {
-    width: '36px',
-    height: '36px',
-    borderRadius: '50%',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: '6px',
-  },
-  cardName: {
-    fontSize: '11px',
-    textAlign: 'center',
-    marginBottom: '2px',
-    lineHeight: '1.2',
-  },
-  cardPrice: {
-    fontSize: '12px',
-    color: '#E5A93C',
-    fontWeight: '700',
-  },
-  priceSlidersBox: {
-    backgroundColor: '#121214',
-    padding: '12px',
-    borderRadius: '10px',
-    border: '1px solid #2A2A36',
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '12px',
-    marginTop: '4px',
-  },
-  sliderBoxTitle: {
-    fontSize: '12px',
-    color: '#A1A1AA',
-    fontWeight: '500',
-  },
-  singleSliderRow: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '8px',
-  },
-  sliderHeader: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    fontSize: '14px',
-  },
-  sliderServiceName: {
-    color: '#FFF',
-    fontWeight: '600',
-  },
-  sliderValueText: {
-    color: '#E5A93C',
-    fontWeight: '700',
-  },
-  sliderInput: {
-    width: '100%',
-    accentColor: '#E5A93C',
-    cursor: 'pointer',
-    height: '6px',
-  },
-  totalBox: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: '#25231F',
-    padding: '12px 14px',
-    borderRadius: '8px',
-    border: '1px solid #E5A93C',
-    color: '#FFF',
-    fontSize: '13px',
-    fontWeight: '600',
-    marginTop: '4px',
-  },
-  totalPriceText: {
-    fontSize: '22px',
-    fontWeight: '800',
-    color: '#E5A93C',
-  },
-  textInput: {
-    backgroundColor: '#121214',
-    border: '1px solid #3F3F46',
-    color: '#FFF',
-    padding: '12px',
-    borderRadius: '8px',
-    fontSize: '14px',
-    width: '100%',
-    boxSizing: 'border-box',
-  },
-  submitBtn: {
-    backgroundColor: '#E5A93C',
-    color: '#121214',
-    border: 'none',
-    padding: '16px',
-    fontSize: '16px',
-    fontWeight: '700',
-    borderRadius: '12px',
-    cursor: 'pointer',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: '8px',
-    marginTop: '4px',
-    boxShadow: '0 4px 14px rgba(229, 169, 60, 0.3)',
-  },
+  toast: { position: 'fixed', top: '20px', left: '50%', transform: 'translateX(-50%)', backgroundColor: '#1E293B', color: '#F8FAFC', padding: '12px 20px', borderRadius: '30px', border: '1px solid #10B981', display: 'flex', alignItems: 'center', gap: '10px', boxShadow: '0 10px 25px rgba(0,0,0,0.5)', zIndex: 9999, fontSize: '14px', fontWeight: '500' },
+  errorBox: { backgroundColor: '#311212', border: '1px solid #EF4444', color: '#F87171', padding: '12px 16px', borderRadius: '10px', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13px' },
+  form: { display: 'flex', flexDirection: 'column', gap: '16px', width: '100%', boxSizing: 'border-box' },
+  header: { marginBottom: '2px' },
+  title: { fontSize: '22px', fontWeight: '700', margin: '0', color: '#FFF' },
+  subtitle: { fontSize: '13px', color: '#A1A1AA' },
+  sectionCard: { backgroundColor: '#1E1E26', padding: '16px', borderRadius: '14px', border: '1px solid #2A2A36', display: 'flex', flexDirection: 'column', gap: '12px', boxSizing: 'border-box', width: '100%', overflow: 'hidden' },
+  label: { fontSize: '13px', color: '#A1A1AA', display: 'flex', alignItems: 'center', gap: '6px', fontWeight: '600' },
+  dateTimeInput: { backgroundColor: '#121214', border: '1px solid #3F3F46', color: '#FFF', padding: '12px', borderRadius: '8px', fontSize: '15px', width: '100%', maxWidth: '100%', boxSizing: 'border-box', minWidth: 0, WebkitAppearance: 'none' },
+  quickTimeBar: { display: 'flex', gap: '8px' },
+  chipBtn: { flex: 1, padding: '8px 0', backgroundColor: '#2A2A36', color: '#D4D4D8', border: 'none', borderRadius: '6px', fontSize: '12px', cursor: 'pointer', fontWeight: '500' },
+  comboBanner: { backgroundColor: '#25231F', border: '1px solid #E5A93C', color: '#E5A93C', padding: '10px 12px', borderRadius: '8px', fontSize: '12px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '8px' },
+  grid3x3: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' },
+  card: { display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '10px 4px', borderRadius: '10px', border: '1.5px solid #2A2A36', cursor: 'pointer', transition: 'all 0.15s ease' },
+  iconCircle: { width: '36px', height: '36px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '6px' },
+  cardName: { fontSize: '11px', textAlign: 'center', marginBottom: '2px', lineHeight: '1.2' },
+  cardPrice: { fontSize: '12px', color: '#E5A93C', fontWeight: '700' },
+  priceSlidersBox: { backgroundColor: '#121214', padding: '12px', borderRadius: '10px', border: '1px solid #2A2A36', display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '4px' },
+  sliderBoxTitle: { fontSize: '12px', color: '#A1A1AA', fontWeight: '500' },
+  singleSliderRow: { display: 'flex', flexDirection: 'column', gap: '8px' },
+  sliderHeader: { display: 'flex', justifyContent: 'space-between', fontSize: '14px' },
+  sliderServiceName: { color: '#FFF', fontWeight: '600' },
+  sliderValueText: { color: '#E5A93C', fontWeight: '700' },
+  sliderInput: { width: '100%', accentColor: '#E5A93C', cursor: 'pointer', height: '6px' },
+  totalBox: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#25231F', padding: '12px 14px', borderRadius: '8px', border: '1px solid #E5A93C', color: '#FFF', fontSize: '13px', fontWeight: '600', marginTop: '4px' },
+  totalPriceText: { fontSize: '22px', fontWeight: '800', color: '#E5A93C' },
+  textInput: { backgroundColor: '#121214', border: '1px solid #3F3F46', color: '#FFF', padding: '12px', borderRadius: '8px', fontSize: '14px', width: '100%', boxSizing: 'border-box' },
+  submitBtn: { backgroundColor: '#E5A93C', color: '#121214', border: 'none', padding: '16px', fontSize: '16px', fontWeight: '700', borderRadius: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginTop: '4px', boxShadow: '0 4px 14px rgba(229, 169, 60, 0.3)' },
 };
