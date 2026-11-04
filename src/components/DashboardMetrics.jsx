@@ -7,10 +7,10 @@ export function DashboardMetrics({ refreshTrigger, calendarDate }) {
   const { t, i18n } = useTranslation();
   
   // Controles de Clique (0 = Hoje, 1 = Semana Atual, 2 = Mês)
-  const [periodIndex, setPeriodIndex] = useState(0); 
+  const [periodIndex, setPeriodIndex] = useState(2); 
   // Agora alternando apenas entre 2 estados: 0 = Top Serviço, 1 = Projeção Mês
-  const [topRightIndex, setTopRightIndex] = useState(0); 
-  const [bottomRightIndex, setBottomRightIndex] = useState(0); 
+  const [topRightIndex, setTopRightIndex] = useState(1); 
+  const [bottomRightIndex, setBottomRightIndex] = useState(1); 
   
   const [metrics, setMetrics] = useState({
     dynamicRevenue: 0, 
@@ -138,7 +138,7 @@ export function DashboardMetrics({ refreshTrigger, calendarDate }) {
 
   const brTitles = [
     t('metrics.avg_ticket') + (lang === 'pt' ? ' (Mês)' : (lang === 'en' ? ' (Month)' : ' (Mes)')),
-    t('metrics.avg_ticket') + (lang === 'pt' ? ' (Geral)' : (lang === 'en' ? ' (All)' : ' (Gral)'))
+    t('metrics.avg_ticket') + (lang === 'pt' ? ' (Geral)' : (lang === 'en' ? ' (All)' : ' (General)'))
   ];
 
   return (
