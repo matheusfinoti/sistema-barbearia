@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { db } from '../services/db';
 import { Filter, Trash2, Edit2, ChevronLeft, ChevronRight, Calendar, Search, X, Check } from 'lucide-react';
 
-export function AppointmentList({ refreshTrigger, onDeleteSuccess }) {
+export function AppointmentList({ refreshTrigger, onDeleteSuccess, isNetView }) {
   const { t, i18n } = useTranslation();
   const [appointments, setAppointments] = useState([]);
   const [filterServiceOptions, setFilterServiceOptions] = useState([]);
@@ -12,15 +12,15 @@ export function AppointmentList({ refreshTrigger, onDeleteSuccess }) {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
 
-  // Estado do Modal de Edição
   const [editingAppointment, setEditingAppointment] = useState(null);
-  const [editItems, setEditItems] = useState([]); // Agora mantemos uma lista estruturada para edição limpa
+  const [editItems, setEditItems] = useState([]);
   const [editDate, setEditDate] = useState('');
   const [editNotes, setEditNotes] = useState('');
   const [availableServices, setAvailableServices] = useState([]);
 
-  // Idioma atual para traduções dinâmicas
   const lang = i18n.language?.slice(0, 2) || 'es';
+  const commissionPercent = Number(localStorage.getItem('barber_commission_percent')) || 100;
+  const factor = isNetView ? (commissionPercent / 100) : 1;
 
   useEffect(() => {
     async function loadData() {
@@ -40,11 +40,9 @@ export function AppointmentList({ refreshTrigger, onDeleteSuccess }) {
     setEditDate(item.date ? new Date(item.date).toISOString().slice(0, 16) : '');
     setEditNotes(item.notes || '');
 
-    // Garante que trazemos os itens detalhados corretamente com seus nomes legíveis
     if (item.items && Array.isArray(item.items) && item.items.length > 0) {
       setEditItems(item.items.map(i => ({ name: i.name, price: Number(i.price) || 0 })));
     } else {
-      // Fallback para itens antigos salvos apenas como texto consolidado
       setEditItems([{ name: item.service_name || 'Serviço', price: Number(item.price) || 0 }]);
     }
   };
@@ -62,10 +60,7 @@ export function AppointmentList({ refreshTrigger, onDeleteSuccess }) {
     let totalPrice = 0;
     const detailedItems = editItems.map(i => {
       totalPrice += i.price;
-      return {
-        name: i.name,
-        price: i.price
-      };
+      return { name: i.name, price: i.price };
     });
 
     const updatedServiceNames = detailedItems.map(i => i.name).join(' + ');
@@ -83,9 +78,7 @@ export function AppointmentList({ refreshTrigger, onDeleteSuccess }) {
       const list = await db.appointments.reverse().sortBy('date');
       setAppointments(list);
       if (onDeleteSuccess) onDeleteSuccess();
-    } catch (err) {
-      console.error('Erro ao atualizar atendimento:', err);
-    }
+    } catch (err) { console.error('Erro ao atualizar atendimento:', err); }
   };
 
   const filteredAppointments = appointments.filter((item) => {
@@ -110,11 +103,10 @@ export function AppointmentList({ refreshTrigger, onDeleteSuccess }) {
 
   const getLocaleCode = () => { return lang === 'en' ? 'en-US' : (lang === 'pt' ? 'pt-BR' : 'es-ES'); };
 
-  // Textos multilíngues localizados para o Modal de Edição
   const modalTexts = {
     title: lang === 'pt' ? 'Editar Atendimento' : (lang === 'en' ? 'Edit Appointment' : 'Editar Cita'),
     datetime: lang === 'pt' ? 'Data e Hora' : (lang === 'en' ? 'Date & Time' : 'Fecha y Hora'),
-    servicesValues: lang === 'pt' ? 'Valores dos Serviços' : (lang === 'en' ? 'Service Prices' : 'Valores de los Servicios'),
+    servicesValues: lang === 'pt' ? 'Valores dos Serviços (Bruto)' : (lang === 'en' ? 'Service Prices (Gross)' : 'Valores de los Servicios (Bruto)'),
     notes: lang === 'pt' ? 'Observações' : (lang === 'en' ? 'Notes' : 'Observaciones'),
     save: lang === 'pt' ? 'Salvar Alterações' : (lang === 'en' ? 'Save Changes' : 'Guardar Cambios')
   };
@@ -154,7 +146,7 @@ export function AppointmentList({ refreshTrigger, onDeleteSuccess }) {
                 <div style={styles.itemInfo}>
                   <div style={styles.itemHeader}>
                     <span style={styles.serviceName}>{item.service_name}</span>
-                    <span style={styles.itemPrice}>€ {Number(item.price).toFixed(2)}</span>
+                    <span style={styles.itemPrice}>€ {(Number(item.price) * factor).toFixed(2)}</span>
                   </div>
                   <div style={styles.itemMeta}>
                     <span style={styles.dateText}>{formattedDate}</span>
@@ -171,7 +163,6 @@ export function AppointmentList({ refreshTrigger, onDeleteSuccess }) {
         </div>
       )}
 
-      {/* MODAL DE EDIÇÃO DO ATENDIMENTO */}
       {editingAppointment && (
         <div style={styles.modalOverlay}>
           <div style={styles.modalBody}>

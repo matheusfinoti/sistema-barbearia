@@ -11,12 +11,22 @@ export default function App() {
   const { t, i18n } = useTranslation();
   const [activeTab, setActiveTab] = useState('DASHBOARD');
   const [refreshKey, setRefreshKey] = useState(0);
-  
   const [calendarDate, setCalendarDate] = useState(new Date());
+  
+  // Controle Global de Visão (Bruto vs Líquido)
+  const [isNetView, setIsNetView] = useState(false);
 
   const handleDataChange = () => setRefreshKey(prev => prev + 1);
   const changeLanguage = (lng) => i18n.changeLanguage(lng);
   const currentLang = i18n.language?.slice(0, 2) || 'es';
+  const commissionVal = localStorage.getItem('barber_commission_percent') || 100;
+
+  // Textos Dinâmicos do Toggle
+  const viewLabels = {
+    pt: { gross: 'Bruto', net: 'Líquido' },
+    es: { gross: 'Bruto', net: 'Neto' },
+    en: { gross: 'Gross', net: 'Net' }
+  };
 
   return (
     <div style={styles.appContainer}>
@@ -48,9 +58,20 @@ export default function App() {
       <main style={styles.mainContent}>
         {activeTab === 'DASHBOARD' && (
           <>
-            <DashboardMetrics refreshTrigger={refreshKey} calendarDate={calendarDate} />
-            <RevenueHeatmap refreshTrigger={refreshKey} currentDate={calendarDate} setCurrentDate={setCalendarDate} />
-            <AppointmentList refreshTrigger={refreshKey} onDeleteSuccess={handleDataChange} />
+            <div style={styles.viewToggleWrapper}>
+              <div style={styles.viewToggleBg}>
+                <button onClick={() => setIsNetView(false)} style={!isNetView ? styles.toggleBtnActive : styles.toggleBtnInactive}>
+                  {viewLabels[currentLang].gross}
+                </button>
+                <button onClick={() => setIsNetView(true)} style={isNetView ? styles.toggleBtnActive : styles.toggleBtnInactive}>
+                  {viewLabels[currentLang].net} ({commissionVal}%)
+                </button>
+              </div>
+            </div>
+            
+            <DashboardMetrics refreshTrigger={refreshKey} calendarDate={calendarDate} isNetView={isNetView} />
+            <RevenueHeatmap refreshTrigger={refreshKey} currentDate={calendarDate} setCurrentDate={setCalendarDate} isNetView={isNetView} />
+            <AppointmentList refreshTrigger={refreshKey} onDeleteSuccess={handleDataChange} isNetView={isNetView} />
           </>
         )}
         {activeTab === 'NEW_HAIRCUT' && (
@@ -63,18 +84,7 @@ export default function App() {
 }
 
 const styles = {
-  appContainer: {
-    backgroundColor: '#121214',
-    minHeight: '100vh',
-    maxWidth: '480px',
-    width: '100%',
-    margin: '0 auto',
-    padding: '16px',
-    color: '#F4F4F5',
-    fontFamily: 'system-ui, -apple-system, sans-serif',
-    boxSizing: 'border-box',
-    overflowX: 'hidden',
-  },
+  appContainer: { backgroundColor: '#121214', minHeight: '100vh', maxWidth: '480px', width: '100%', margin: '0 auto', padding: '16px', color: '#F4F4F5', fontFamily: 'system-ui, -apple-system, sans-serif', boxSizing: 'border-box', overflowX: 'hidden' },
   header: { textAlign: 'center', marginBottom: '16px', width: '100%', boxSizing: 'border-box' },
   langBar: { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', marginBottom: '8px' },
   langBtn: { backgroundColor: 'transparent', border: 'none', fontSize: '12px', cursor: 'pointer', padding: '2px 4px' },
@@ -84,4 +94,9 @@ const styles = {
   navBar: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px', marginBottom: '16px', width: '100%', boxSizing: 'border-box' },
   tabBtn: { padding: '12px 0', border: 'none', borderRadius: '10px', fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', transition: 'all 0.15s ease' },
   mainContent: { display: 'flex', flexDirection: 'column', width: '100%', maxWidth: '100%', boxSizing: 'border-box' },
+  
+  viewToggleWrapper: { display: 'flex', justifyContent: 'center', marginBottom: '16px', width: '100%' },
+  viewToggleBg: { display: 'flex', backgroundColor: '#1E1E26', borderRadius: '10px', border: '1px solid #2A2A36', padding: '4px', gap: '4px' },
+  toggleBtnActive: { backgroundColor: '#E5A93C', color: '#121214', border: 'none', padding: '6px 16px', borderRadius: '6px', fontSize: '12px', fontWeight: '700', cursor: 'pointer', transition: 'all 0.2s ease' },
+  toggleBtnInactive: { backgroundColor: 'transparent', color: '#A1A1AA', border: 'none', padding: '6px 16px', borderRadius: '6px', fontSize: '12px', fontWeight: '500', cursor: 'pointer', transition: 'all 0.2s ease' }
 };

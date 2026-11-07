@@ -1,16 +1,24 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { db } from '../services/db';
-import { ShieldAlert, Share2, Database, CheckCircle, Plus, Edit2, Trash2, Tag, Scissors, User, Zap, Smile, Sparkles, Palette, Sun, Waves, Coins, Star, Heart, X, Upload, AlertTriangle } from 'lucide-react';
+import { ShieldAlert, Share2, Database, CheckCircle, Plus, Edit2, Trash2, Tag, Scissors, User, Zap, Smile, Sparkles, Palette, Sun, Waves, Coins, Star, Heart, X, Upload, AlertTriangle, Percent, Save } from 'lucide-react';
 
 const AVAILABLE_ICONS = [ { name: 'Scissors', Icon: Scissors }, { name: 'User', Icon: User }, { name: 'Zap', Icon: Zap }, { name: 'Smile', Icon: Smile }, { name: 'Sparkles', Icon: Sparkles }, { name: 'Palette', Icon: Palette }, { name: 'Sun', Icon: Sun }, { name: 'Waves', Icon: Waves }, { name: 'Coins', Icon: Coins }, { name: 'Star', Icon: Star }, { name: 'Heart', Icon: Heart }, { name: 'Tag', Icon: Tag } ];
 
 export function AdminPanel() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [services, setServices] = useState([]);
   const [isExporting, setIsExporting] = useState(false);
   const [statusKey, setStatusKey] = useState('');
   const [errorKey, setErrorKey] = useState('');
+  
+  // ESTADO DA COMISSÃO (%)
+  const [commissionPercent, setCommissionPercent] = useState(
+    localStorage.getItem('barber_commission_percent') || '100'
+  );
+  const [savedCommissionToast, setSavedCommissionToast] = useState(false);
+
+  // ESTADOS DO MODAL DE SERVIÇOS
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [formName, setFormName] = useState('');
@@ -18,12 +26,23 @@ export function AdminPanel() {
   const [formIcon, setFormIcon] = useState('Scissors');
   const fileInputRef = useRef(null);
 
+  const lang = i18n.language?.slice(0, 2) || 'es';
+
   useEffect(() => { loadServices(); }, []);
 
   async function loadServices() {
     const list = await db.services.toArray();
     setServices(list);
   }
+
+  const handleSaveCommission = (e) => {
+    e.preventDefault();
+    const val = Math.max(0, Math.min(100, Number(commissionPercent) || 100));
+    localStorage.setItem('barber_commission_percent', val.toString());
+    setCommissionPercent(val.toString());
+    setSavedCommissionToast(true);
+    setTimeout(() => setSavedCommissionToast(false), 2500);
+  };
 
   const handleBackup = async () => {
     setStatusKey(''); setErrorKey(''); setIsExporting(true);
@@ -103,6 +122,14 @@ export function AdminPanel() {
     if (window.confirm(t('admin.delete_service_confirm', { name }))) { await db.services.delete(id); loadServices(); }
   };
 
+  // Textos Multilíngues da Comissão
+  const commissionTexts = {
+    title: lang === 'pt' ? 'Porcentagem de Comissão' : (lang === 'en' ? 'Commission Percentage' : 'Porcentaje de Comisión'),
+    desc: lang === 'pt' ? 'Informe a porcentagem real (%) que você recebe sobre cada serviço.' : (lang === 'en' ? 'Enter the actual percentage (%) you earn from each service.' : 'Ingresa el porcentaje real (%) que recibes por cada servicio.'),
+    saveBtn: lang === 'pt' ? 'Salvar Porcentagem' : (lang === 'en' ? 'Save Percentage' : 'Guardar Porcentaje'),
+    savedToast: lang === 'pt' ? 'Porcentagem salva com sucesso!' : (lang === 'en' ? 'Percentage saved successfully!' : '¡Porcentaje guardado con éxito!')
+  };
+
   return (
     <div style={styles.container}>
       <div style={styles.header}>
@@ -111,6 +138,41 @@ export function AdminPanel() {
         <p style={styles.subtitle}>{t('admin.subtitle')}</p>
       </div>
 
+      {/* CONFIGURAÇÃO DE COMISSÃO (%) */}
+      <div style={styles.sectionCard}>
+        <div style={styles.cardHeader}>
+          <Percent size={20} color="#10B981" />
+          <h3 style={styles.cardTitle}>{commissionTexts.title}</h3>
+        </div>
+        <p style={styles.cardDescription}>{commissionTexts.desc}</p>
+        
+        {savedCommissionToast && (
+          <div style={styles.statusBox}>
+            <CheckCircle size={16} color="#10B981" />
+            <span>{commissionTexts.savedToast}</span>
+          </div>
+        )}
+
+        <form onSubmit={handleSaveCommission} style={styles.commissionForm}>
+          <div style={styles.commissionInputGroup}>
+            <input 
+              type="number" 
+              min="0" 
+              max="100" 
+              step="1"
+              value={commissionPercent} 
+              onChange={(e) => setCommissionPercent(e.target.value)} 
+              style={styles.commissionInput}
+            />
+            <span style={styles.percentSymbol}>%</span>
+          </div>
+          <button type="submit" style={styles.saveCommissionBtn}>
+            <Save size={16} /> {commissionTexts.saveBtn}
+          </button>
+        </form>
+      </div>
+
+      {/* GERENCIAMENTO DE SERVIÇOS */}
       <div style={styles.sectionCard}>
         <div style={styles.cardHeaderBetween}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -142,6 +204,7 @@ export function AdminPanel() {
         </div>
       </div>
 
+      {/* BACKUP E RESTAURAÇÃO */}
       <div style={styles.sectionCard}>
         <div style={styles.cardHeader}>
           <Database size={20} color="#38BDF8" />
@@ -157,6 +220,7 @@ export function AdminPanel() {
         </div>
       </div>
 
+      {/* MODAL DE SERVIÇOS */}
       {isModalOpen && (
         <div style={styles.modalOverlay}>
           <div style={styles.modalBody}>
@@ -206,6 +270,13 @@ const styles = {
   cardHeaderBetween: { display: 'flex', alignItems: 'center', justifyContent: 'space-between' },
   cardTitle: { fontSize: '16px', fontWeight: '600', color: '#FFF', margin: 0 },
   cardDescription: { fontSize: '13px', color: '#A1A1AA', lineHeight: '1.4', margin: 0 },
+  
+  commissionForm: { display: 'flex', alignItems: 'center', gap: '10px', marginTop: '4px' },
+  commissionInputGroup: { display: 'flex', alignItems: 'center', backgroundColor: '#121214', border: '1px solid #3F3F46', borderRadius: '8px', padding: '0 10px', width: '110px' },
+  commissionInput: { backgroundColor: 'transparent', border: 'none', color: '#10B981', fontSize: '18px', fontWeight: '800', width: '100%', textAlign: 'right', outline: 'none', padding: '8px 4px' },
+  percentSymbol: { color: '#10B981', fontSize: '16px', fontWeight: '800' },
+  saveCommissionBtn: { flex: 1, backgroundColor: '#10B981', color: '#121214', border: 'none', padding: '10px 14px', borderRadius: '8px', fontSize: '13px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' },
+
   addBtn: { backgroundColor: '#E5A93C', color: '#121214', border: 'none', padding: '6px 12px', borderRadius: '8px', fontSize: '12px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' },
   servicesList: { display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '4px' },
   serviceRow: { backgroundColor: '#121214', padding: '10px 12px', borderRadius: '8px', border: '1px solid #2A2A36', display: 'flex', alignItems: 'center', justifyContent: 'space-between' },

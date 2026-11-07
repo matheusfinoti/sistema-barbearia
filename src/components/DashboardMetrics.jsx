@@ -3,14 +3,11 @@ import { useTranslation } from 'react-i18next';
 import { db } from '../services/db';
 import { Euro, Users, TrendingUp, RefreshCcw, Star, Target } from 'lucide-react';
 
-export function DashboardMetrics({ refreshTrigger, calendarDate }) {
+export function DashboardMetrics({ refreshTrigger, calendarDate, isNetView }) {
   const { t, i18n } = useTranslation();
-  
-  // Controles de Clique (0 = Hoje, 1 = Semana Atual, 2 = Mês)
   const [periodIndex, setPeriodIndex] = useState(2); 
-  // Agora alternando apenas entre 2 estados: 0 = Top Serviço, 1 = Projeção Mês
-  const [topRightIndex, setTopRightIndex] = useState(1); 
-  const [bottomRightIndex, setBottomRightIndex] = useState(1); 
+  const [topRightIndex, setTopRightIndex] = useState(0); 
+  const [bottomRightIndex, setBottomRightIndex] = useState(0); 
   
   const [metrics, setMetrics] = useState({
     dynamicRevenue: 0, 
@@ -27,6 +24,8 @@ export function DashboardMetrics({ refreshTrigger, calendarDate }) {
       try {
         const allAppointments = await db.appointments.toArray();
         const now = new Date();
+        const commissionPercent = Number(localStorage.getItem('barber_commission_percent')) || 100;
+        const factor = isNetView ? (commissionPercent / 100) : 1;
 
         const calYear = calendarDate.getFullYear();
         const calMonth = calendarDate.getMonth();
@@ -34,20 +33,18 @@ export function DashboardMetrics({ refreshTrigger, calendarDate }) {
         const endOfCalMonth = new Date(calYear, calMonth + 1, 0, 23, 59, 59);
 
         let startOfDynamic, endOfDynamic;
-        if (periodIndex === 0) { // Hoje
+        if (periodIndex === 0) {
           startOfDynamic = new Date(now.getFullYear(), now.getMonth(), now.getDate());
           endOfDynamic = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
-        } else if (periodIndex === 1) { // Semana Atual (Segunda a Domingo)
+        } else if (periodIndex === 1) {
           const dayOfWeek = now.getDay();
           const diffToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
-          
           startOfDynamic = new Date(now.getFullYear(), now.getMonth(), now.getDate() + diffToMonday);
           startOfDynamic.setHours(0, 0, 0, 0);
-          
           endOfDynamic = new Date(startOfDynamic);
           endOfDynamic.setDate(startOfDynamic.getDate() + 6);
           endOfDynamic.setHours(23, 59, 59, 999);
-        } else { // Mês Selecionado
+        } else {
           startOfDynamic = startOfCalMonth;
           endOfDynamic = endOfCalMonth;
         }
@@ -55,12 +52,11 @@ export function DashboardMetrics({ refreshTrigger, calendarDate }) {
         let calMonthRev = 0, calMonthCuts = 0;
         let dynRev = 0, dynCuts = 0;
         let allTimeRev = 0, allTimeCuts = 0;
-        
         const serviceCounts = {};
 
         allAppointments.forEach(item => {
           const d = new Date(item.date);
-          const price = Number(item.price) || 0;
+          const price = (Number(item.price) || 0) * factor;
 
           allTimeRev += price;
           allTimeCuts += 1;
@@ -68,15 +64,12 @@ export function DashboardMetrics({ refreshTrigger, calendarDate }) {
           if (d >= startOfCalMonth && d <= endOfCalMonth) { 
             calMonthRev += price; 
             calMonthCuts += 1; 
-            
             if (item.service_name) {
-              const sNames = item.service_name.split(' + ');
-              sNames.forEach(s => {
+              item.service_name.split(' + ').forEach(s => {
                 if (s) serviceCounts[s] = (serviceCounts[s] || 0) + 1;
               });
             }
           }
-
           if (d >= startOfDynamic && d <= endOfDynamic) { 
             dynRev += price; 
             dynCuts += 1; 
@@ -113,32 +106,30 @@ export function DashboardMetrics({ refreshTrigger, calendarDate }) {
       } catch (err) { console.error('Erro:', err); }
     }
     calculateMetrics();
-  }, [refreshTrigger, calendarDate, periodIndex]);
+  }, [refreshTrigger, calendarDate, periodIndex, isNetView]);
 
   const togglePeriod = () => setPeriodIndex(prev => (prev + 1) % 3);
-  // Alterna apenas entre 0 e 1 (Top Serviço e Projeção Mês)
   const toggleTopRight = () => setTopRightIndex(prev => (prev + 1) % 2);
   const toggleBottomRight = () => setBottomRightIndex(prev => (prev + 1) % 2);
 
-  const lang = i18n.language?.slice(0, 2);
+  const lang = i18n.language?.slice(0, 2) || 'es';
   const labelRev = lang === 'pt' ? 'Faturamento' : (lang === 'en' ? 'Revenue' : 'Facturación');
   const labelSrv = lang === 'pt' ? 'Serviços' : (lang === 'en' ? 'Services' : 'Servicios');
   
   const periodLabels = [
-    t('list.period_today'), 
+    t('list.period_today', 'Hoy'), 
     lang === 'pt' ? 'Esta Semana' : (lang === 'en' ? 'This Week' : 'Esta Semana'), 
-    t('list.period_month')
+    t('list.period_month', 'Este Mes')
   ];
   
-  // Títulos limitados às 2 opções solicitadas
   const trTitles = [
     lang === 'pt' ? 'Top Serviço' : (lang === 'en' ? 'Top Service' : 'Top Servicio'), 
     lang === 'pt' ? 'Projeção Mês' : (lang === 'en' ? 'Forecast' : 'Proyección Mes')
   ];
 
   const brTitles = [
-    t('metrics.avg_ticket') + (lang === 'pt' ? ' (Mês)' : (lang === 'en' ? ' (Month)' : ' (Mes)')),
-    t('metrics.avg_ticket') + (lang === 'pt' ? ' (Geral)' : (lang === 'en' ? ' (All)' : ' (General)'))
+    t('metrics.avg_ticket', 'Ticket Medio') + (lang === 'pt' ? ' (Mês)' : (lang === 'en' ? ' (Month)' : ' (Mes)')),
+    t('metrics.avg_ticket', 'Ticket Medio') + (lang === 'pt' ? ' (Geral)' : (lang === 'en' ? ' (All)' : ' (Gral)'))
   ];
 
   return (
@@ -148,7 +139,6 @@ export function DashboardMetrics({ refreshTrigger, calendarDate }) {
           <span>{periodLabels[periodIndex]}</span>
           <RefreshCcw size={14} color="#71717A" />
         </div>
-        
         <div style={styles.mainCardBody}>
           <div style={styles.halfCol}>
             <Euro size={22} color="#10B981" style={styles.iconWrapper} />
