@@ -6,8 +6,8 @@ import { Euro, Users, TrendingUp, RefreshCcw, Star, Target } from 'lucide-react'
 export function DashboardMetrics({ refreshTrigger, calendarDate, isNetView }) {
   const { t, i18n } = useTranslation();
   const [periodIndex, setPeriodIndex] = useState(2); 
-  const [topRightIndex, setTopRightIndex] = useState(0); 
-  const [bottomRightIndex, setBottomRightIndex] = useState(0); 
+  const [topRightIndex, setTopRightIndex] = useState(1); 
+  const [bottomRightIndex, setBottomRightIndex] = useState(1); 
   
   const [metrics, setMetrics] = useState({
     dynamicRevenue: 0, 

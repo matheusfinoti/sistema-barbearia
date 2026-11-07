@@ -1,12 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { db } from '../services/db';
-import { ChevronLeft, ChevronRight, Flame } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Flame, Scissors, Clock } from 'lucide-react';
 
 export function RevenueHeatmap({ refreshTrigger, currentDate, setCurrentDate, isNetView }) {
   const { t, i18n } = useTranslation();
   const [dailyData, setDailyData] = useState({});
   const [maxRevenue, setMaxRevenue] = useState(0);
+  
+  // Controle para exibir os detalhes do dia clicado
+  const [selectedDayInfo, setSelectedDayInfo] = useState(null);
 
   useEffect(() => { loadMonthData(); }, [currentDate, refreshTrigger, isNetView]);
 
@@ -32,16 +35,44 @@ export function RevenueHeatmap({ refreshTrigger, currentDate, setCurrentDate, is
       filtered.forEach(item => {
         const itemDate = new Date(item.date);
         const dayKey = itemDate.getDate();
-        if (!revenueByDay[dayKey]) revenueByDay[dayKey] = { total: 0, count: 0 };
+        
+        // Inicializa o dia se não existir, preparando o array de itens
+        if (!revenueByDay[dayKey]) {
+          revenueByDay[dayKey] = { total: 0, count: 0, items: [] };
+        }
         
         const price = (Number(item.price) || 0) * factor;
         
         revenueByDay[dayKey].total += price;
         revenueByDay[dayKey].count += 1;
-        if (revenueByDay[dayKey].total > highestDayValue) { highestDayValue = revenueByDay[dayKey].total; }
+        
+        // Popula a lista detalhada para a gaveta
+        let srvItems = [];
+        if (item.items && Array.isArray(item.items)) {
+          srvItems = item.items.map(i => ({
+            name: i.name,
+            price: (Number(i.price) || 0) * factor,
+            time: itemDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+          }));
+        } else {
+          // Fallback para apontamentos antigos sem detalhamento estruturado
+          srvItems = [{
+            name: item.service_name || 'Serviço',
+            price: price,
+            time: itemDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+          }];
+        }
+        
+        revenueByDay[dayKey].items.push(...srvItems);
+
+        if (revenueByDay[dayKey].total > highestDayValue) { 
+          highestDayValue = revenueByDay[dayKey].total; 
+        }
       });
+
       setDailyData(revenueByDay);
       setMaxRevenue(highestDayValue);
+      setSelectedDayInfo(null); // Reseta a gaveta ao mudar o mês ou o status líquido/bruto
     } catch (err) { console.error('Erro heatmap:', err); }
   }
 
@@ -63,6 +94,9 @@ export function RevenueHeatmap({ refreshTrigger, currentDate, setCurrentDate, is
     return `rgba(16, 185, 129, ${alpha.toFixed(2)})`;
   };
 
+  const lang = i18n.language?.slice(0, 2) || 'es';
+  const labelTotal = lang === 'pt' ? 'Total' : (lang === 'en' ? 'Total' : 'Total');
+
   return (
     <div style={styles.card}>
       <div style={styles.header}>
@@ -83,15 +117,29 @@ export function RevenueHeatmap({ refreshTrigger, currentDate, setCurrentDate, is
         {Array.from({ length: firstDayOfWeek }).map((_, idx) => <div key={`empty-${idx}`} style={styles.emptyCell} />)}
         {Array.from({ length: totalDaysInMonth }).map((_, idx) => {
           const dayNumber = idx + 1;
-          const dayInfo = dailyData[dayNumber] || { total: 0, count: 0 };
+          const dayInfo = dailyData[dayNumber] || { total: 0, count: 0, items: [] };
           const bgColor = getDayBackgroundColor(dayInfo.total);
           const hasData = dayInfo.total > 0;
+          const isSelected = selectedDayInfo?.day === dayNumber;
+
           return (
-            <div key={dayNumber} style={{...styles.dayCell, backgroundColor: bgColor, borderColor: hasData ? '#10B981' : '#2A2A36', color: hasData ? '#FFF' : '#52525B'}}>
+            <div 
+              key={dayNumber} 
+              onClick={() => hasData && setSelectedDayInfo(isSelected ? null : { day: dayNumber, ...dayInfo })}
+              style={{
+                ...styles.dayCell, 
+                backgroundColor: bgColor, 
+                borderColor: isSelected ? '#E5A93C' : (hasData ? '#10B981' : '#2A2A36'),
+                borderWidth: isSelected ? '2px' : '1px',
+                color: hasData ? '#FFF' : '#52525B',
+                cursor: hasData ? 'pointer' : 'default'
+              }}
+            >
               <span style={styles.dayNumber}>{dayNumber}</span>
               {hasData && (
                 <>
-                  <span style={styles.cellRevenue}>€{dayInfo.total % 1 === 0 ? dayInfo.total : dayInfo.total.toFixed(0)}</span>
+                  {/* Corrigido: Não arredondamos mais para número inteiro, sempre 2 casas decimais */}
+                  <span style={styles.cellRevenue}>€ {dayInfo.total.toFixed(2)}</span>
                   <span style={styles.cellCount}>{dayInfo.count}x</span>
                 </>
               )}
@@ -99,6 +147,37 @@ export function RevenueHeatmap({ refreshTrigger, currentDate, setCurrentDate, is
           );
         })}
       </div>
+
+      {/* GAVETA DE DETALHES DO DIA SELECIONADO */}
+      {selectedDayInfo && (
+        <div style={styles.detailCard}>
+          <div style={styles.detailHeader}>
+            <span style={styles.detailDateText}>
+              {selectedDayInfo.day} de {monthName}
+            </span>
+            <span style={styles.detailTotalText}>
+              {labelTotal}: € {selectedDayInfo.total.toFixed(2)}
+            </span>
+          </div>
+
+          <div style={styles.detailList}>
+            {selectedDayInfo.items.map((item, idx) => (
+              <div key={idx} style={styles.detailItemRow}>
+                <div style={styles.detailItemLeft}>
+                  <div style={styles.miniIconBox}>
+                    <Scissors size={10} color="#E5A93C" />
+                  </div>
+                  <span style={styles.detailItemName}>{item.name}</span>
+                </div>
+                <div style={styles.detailItemRight}>
+                  <span style={styles.detailItemTime}><Clock size={9} /> {item.time}</span>
+                  <span style={styles.detailItemPrice}>€ {item.price.toFixed(2)}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -114,9 +193,23 @@ const styles = {
   weekdaysGrid: { display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', textAlign: 'center' },
   weekdayText: { fontSize: '9px', fontWeight: '700', color: '#A1A1AA', textTransform: 'uppercase' },
   daysGrid: { display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '3px' },
-  emptyCell: { minHeight: '38px' },
-  dayCell: { minHeight: '38px', borderRadius: '6px', border: '1px solid #2A2A36', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '2px 1px', boxSizing: 'border-box', lineHeight: '1.1', overflow: 'hidden' },
+  emptyCell: { minHeight: '40px' }, // Aumentado ligeiramente para os decimais caberem
+  dayCell: { minHeight: '40px', borderRadius: '6px', borderStyle: 'solid', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '2px 0px', boxSizing: 'border-box', lineHeight: '1.2', overflow: 'hidden', transition: 'all 0.15s ease' },
   dayNumber: { fontSize: '8px', fontWeight: '700', opacity: 0.7 },
-  cellRevenue: { fontSize: '9.5px', fontWeight: '800', color: '#FFF', marginTop: '1px' },
+  cellRevenue: { fontSize: '9px', fontWeight: '800', color: '#FFF', marginTop: '1px', whiteSpace: 'nowrap' }, // Mantido pequeno para caber "€ 15.50"
   cellCount: { fontSize: '7.5px', color: '#D1D5DB', fontWeight: '600', opacity: 0.85 },
+  
+  // Estilos da Gaveta de Detalhes
+  detailCard: { backgroundColor: '#121214', border: '1px solid #E5A93C', borderRadius: '8px', padding: '10px', marginTop: '6px', display: 'flex', flexDirection: 'column', gap: '8px', animation: 'fadeIn 0.2s ease' },
+  detailHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #2A2A36', paddingBottom: '6px' },
+  detailDateText: { fontSize: '11px', color: '#A1A1AA', fontWeight: '600', textTransform: 'capitalize' },
+  detailTotalText: { fontSize: '12px', color: '#10B981', fontWeight: '800' },
+  detailList: { display: 'flex', flexDirection: 'column', gap: '5px', maxHeight: '120px', overflowY: 'auto', paddingRight: '2px' },
+  detailItemRow: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#1E1E26', padding: '6px 8px', borderRadius: '6px', border: '1px solid #2A2A36' },
+  detailItemLeft: { display: 'flex', alignItems: 'center', gap: '6px', overflow: 'hidden' },
+  miniIconBox: { width: '20px', height: '20px', borderRadius: '50%', backgroundColor: '#25231F', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  detailItemName: { fontSize: '11px', color: '#FFF', fontWeight: '600', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' },
+  detailItemRight: { display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 },
+  detailItemTime: { fontSize: '9px', color: '#71717A', display: 'flex', alignItems: 'center', gap: '3px' },
+  detailItemPrice: { fontSize: '11px', color: '#E5A93C', fontWeight: '700' }
 };

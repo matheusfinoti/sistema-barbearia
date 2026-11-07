@@ -5,7 +5,7 @@ import { RevenueHeatmap } from './components/RevenueHeatmap';
 import { AppointmentList } from './components/AppointmentList';
 import { HaircutForm } from './components/HaircutForm';
 import { AdminPanel } from './components/AdminPanel';
-import { LayoutDashboard, PlusCircle, ShieldAlert, Globe } from 'lucide-react';
+import { LayoutDashboard, PlusCircle, ShieldAlert, Globe, Percent } from 'lucide-react';
 
 export default function App() {
   const { t, i18n } = useTranslation();
@@ -19,18 +19,29 @@ export default function App() {
   const handleDataChange = () => setRefreshKey(prev => prev + 1);
   const changeLanguage = (lng) => i18n.changeLanguage(lng);
   const currentLang = i18n.language?.slice(0, 2) || 'es';
-  const commissionVal = localStorage.getItem('barber_commission_percent') || 100;
 
-  // Textos Dinâmicos do Toggle
-  const viewLabels = {
-    pt: { gross: 'Bruto', net: 'Líquido' },
-    es: { gross: 'Bruto', net: 'Neto' },
-    en: { gross: 'Gross', net: 'Net' }
-  };
+  // Textos dinâmicos para a acessibilidade/título do botão
+  const toggleTitle = isNetView 
+    ? (currentLang === 'pt' ? 'Desativar comissão (Ver Bruto)' : (currentLang === 'en' ? 'Disable commission (View Gross)' : 'Desactivar comisión (Ver Bruto)'))
+    : (currentLang === 'pt' ? 'Ativar comissão (Ver Líquido)' : (currentLang === 'en' ? 'Enable commission (View Net)' : 'Activar comisión (Ver Neto)'));
 
   return (
     <div style={styles.appContainer}>
       <header style={styles.header}>
+        {/* BOTÃO DISCRETO DE PORCENTAGEM NO CANTO SUPERIOR DIREITO */}
+        <button 
+          onClick={() => setIsNetView(!isNetView)} 
+          style={{
+            ...styles.netToggleBtn, 
+            color: isNetView ? '#10B981' : '#71717A',
+            borderColor: isNetView ? '#10B981' : '#2A2A36',
+            backgroundColor: isNetView ? 'rgba(16, 185, 129, 0.1)' : '#1E1E26'
+          }}
+          title={toggleTitle}
+        >
+          <Percent size={14} strokeWidth={isNetView ? 3 : 2} />
+        </button>
+
         <div style={styles.langBar}>
           <Globe size={14} color="#A1A1AA" />
           <button onClick={() => changeLanguage('es')} style={{...styles.langBtn, color: currentLang === 'es' ? '#E5A93C' : '#71717A', fontWeight: currentLang === 'es' ? '700' : '400'}}>ES</button>
@@ -39,6 +50,7 @@ export default function App() {
           <span style={styles.langDivider}>|</span>
           <button onClick={() => changeLanguage('pt')} style={{...styles.langBtn, color: currentLang === 'pt' ? '#E5A93C' : '#71717A', fontWeight: currentLang === 'pt' ? '700' : '400'}}>PT</button>
         </div>
+        
         <h1 style={styles.brandTitle}>{t('app.title')}<span style={{ color: '#E5A93C' }}>{t('app.title_highlight')}</span></h1>
         <p style={styles.brandSubtitle}>{t('app.subtitle')}</p>
       </header>
@@ -58,17 +70,6 @@ export default function App() {
       <main style={styles.mainContent}>
         {activeTab === 'DASHBOARD' && (
           <>
-            <div style={styles.viewToggleWrapper}>
-              <div style={styles.viewToggleBg}>
-                <button onClick={() => setIsNetView(false)} style={!isNetView ? styles.toggleBtnActive : styles.toggleBtnInactive}>
-                  {viewLabels[currentLang].gross}
-                </button>
-                <button onClick={() => setIsNetView(true)} style={isNetView ? styles.toggleBtnActive : styles.toggleBtnInactive}>
-                  {viewLabels[currentLang].net} ({commissionVal}%)
-                </button>
-              </div>
-            </div>
-            
             <DashboardMetrics refreshTrigger={refreshKey} calendarDate={calendarDate} isNetView={isNetView} />
             <RevenueHeatmap refreshTrigger={refreshKey} currentDate={calendarDate} setCurrentDate={setCalendarDate} isNetView={isNetView} />
             <AppointmentList refreshTrigger={refreshKey} onDeleteSuccess={handleDataChange} isNetView={isNetView} />
@@ -85,18 +86,16 @@ export default function App() {
 
 const styles = {
   appContainer: { backgroundColor: '#121214', minHeight: '100vh', maxWidth: '480px', width: '100%', margin: '0 auto', padding: '16px', color: '#F4F4F5', fontFamily: 'system-ui, -apple-system, sans-serif', boxSizing: 'border-box', overflowX: 'hidden' },
-  header: { textAlign: 'center', marginBottom: '16px', width: '100%', boxSizing: 'border-box' },
+  header: { textAlign: 'center', marginBottom: '16px', width: '100%', boxSizing: 'border-box', position: 'relative' },
   langBar: { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', marginBottom: '8px' },
   langBtn: { backgroundColor: 'transparent', border: 'none', fontSize: '12px', cursor: 'pointer', padding: '2px 4px' },
   langDivider: { fontSize: '10px', color: '#3F3F46' },
   brandTitle: { fontSize: '24px', fontWeight: '800', margin: 0, color: '#FFF', letterSpacing: '-0.5px' },
   brandSubtitle: { fontSize: '12px', color: '#71717A', margin: '2px 0 0 0' },
+  
+  netToggleBtn: { position: 'absolute', top: '0px', right: '0px', padding: '6px', borderRadius: '8px', border: '1px solid', cursor: 'pointer', transition: 'all 0.2s ease', display: 'flex', alignItems: 'center', justifyContent: 'center' },
+
   navBar: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px', marginBottom: '16px', width: '100%', boxSizing: 'border-box' },
   tabBtn: { padding: '12px 0', border: 'none', borderRadius: '10px', fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', transition: 'all 0.15s ease' },
   mainContent: { display: 'flex', flexDirection: 'column', width: '100%', maxWidth: '100%', boxSizing: 'border-box' },
-  
-  viewToggleWrapper: { display: 'flex', justifyContent: 'center', marginBottom: '16px', width: '100%' },
-  viewToggleBg: { display: 'flex', backgroundColor: '#1E1E26', borderRadius: '10px', border: '1px solid #2A2A36', padding: '4px', gap: '4px' },
-  toggleBtnActive: { backgroundColor: '#E5A93C', color: '#121214', border: 'none', padding: '6px 16px', borderRadius: '6px', fontSize: '12px', fontWeight: '700', cursor: 'pointer', transition: 'all 0.2s ease' },
-  toggleBtnInactive: { backgroundColor: 'transparent', color: '#A1A1AA', border: 'none', padding: '6px 16px', borderRadius: '6px', fontSize: '12px', fontWeight: '500', cursor: 'pointer', transition: 'all 0.2s ease' }
 };
