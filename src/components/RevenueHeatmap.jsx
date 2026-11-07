@@ -1,14 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { db } from '../services/db';
+import { db, dbApi } from '../services/db';
 import { ChevronLeft, ChevronRight, Flame, Scissors, Clock } from 'lucide-react';
 
 export function RevenueHeatmap({ refreshTrigger, currentDate, setCurrentDate, isNetView }) {
   const { t, i18n } = useTranslation();
   const [dailyData, setDailyData] = useState({});
   const [maxRevenue, setMaxRevenue] = useState(0);
-  
-  // Controle para exibir os detalhes do dia clicado
   const [selectedDayInfo, setSelectedDayInfo] = useState(null);
 
   useEffect(() => { loadMonthData(); }, [currentDate, refreshTrigger, isNetView]);
@@ -19,9 +17,12 @@ export function RevenueHeatmap({ refreshTrigger, currentDate, setCurrentDate, is
       const month = currentDate.getMonth();
       const startOfMonth = new Date(year, month, 1);
       const endOfMonth = new Date(year, month + 1, 0, 23, 59, 59);
-      const appointments = await db.appointments.toArray();
-      
-      const commissionPercent = Number(localStorage.getItem('barber_commission_percent')) || 100;
+
+      // Carrega através da dbApi para descriptografar os itens
+      const appointments = await dbApi.getAppointments();
+
+      const rawCommission = Number(localStorage.getItem('barber_commission_percent'));
+      const commissionPercent = isNaN(rawCommission) ? 100 : rawCommission;
       const factor = isNetView ? (commissionPercent / 100) : 1;
 
       const filtered = appointments.filter(item => {
@@ -36,29 +37,30 @@ export function RevenueHeatmap({ refreshTrigger, currentDate, setCurrentDate, is
         const itemDate = new Date(item.date);
         const dayKey = itemDate.getDate();
         
-        // Inicializa o dia se não existir, preparando o array de itens
         if (!revenueByDay[dayKey]) {
           revenueByDay[dayKey] = { total: 0, count: 0, items: [] };
         }
         
-        const price = (Number(item.price) || 0) * factor;
+        const rawPrice = Number(item.price);
+        const safePrice = (isNaN(rawPrice) ? 0 : rawPrice) * factor;
         
-        revenueByDay[dayKey].total += price;
+        revenueByDay[dayKey].total += safePrice;
         revenueByDay[dayKey].count += 1;
         
-        // Popula a lista detalhada para a gaveta
         let srvItems = [];
-        if (item.items && Array.isArray(item.items)) {
-          srvItems = item.items.map(i => ({
-            name: i.name,
-            price: (Number(i.price) || 0) * factor,
-            time: itemDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-          }));
+        if (item.items && Array.isArray(item.items) && item.items.length > 0) {
+          srvItems = item.items.map(i => {
+            const ip = Number(i.price);
+            return {
+              name: i.name,
+              price: (isNaN(ip) ? 0 : ip) * factor,
+              time: itemDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+            };
+          });
         } else {
-          // Fallback para apontamentos antigos sem detalhamento estruturado
           srvItems = [{
             name: item.service_name || 'Serviço',
-            price: price,
+            price: safePrice,
             time: itemDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
           }];
         }
@@ -72,8 +74,10 @@ export function RevenueHeatmap({ refreshTrigger, currentDate, setCurrentDate, is
 
       setDailyData(revenueByDay);
       setMaxRevenue(highestDayValue);
-      setSelectedDayInfo(null); // Reseta a gaveta ao mudar o mês ou o status líquido/bruto
-    } catch (err) { console.error('Erro heatmap:', err); }
+      setSelectedDayInfo(null);
+    } catch (err) { 
+      console.error('Erro heatmap:', err); 
+    }
   }
 
   const handlePrevMonth = () => setCurrentDate(prev => new Date(prev.getFullYear(), prev.getMonth() - 1, 1));
@@ -138,7 +142,6 @@ export function RevenueHeatmap({ refreshTrigger, currentDate, setCurrentDate, is
               <span style={styles.dayNumber}>{dayNumber}</span>
               {hasData && (
                 <>
-                  {/* Corrigido: Não arredondamos mais para número inteiro, sempre 2 casas decimais */}
                   <span style={styles.cellRevenue}>€ {dayInfo.total.toFixed(2)}</span>
                   <span style={styles.cellCount}>{dayInfo.count}x</span>
                 </>
@@ -148,7 +151,6 @@ export function RevenueHeatmap({ refreshTrigger, currentDate, setCurrentDate, is
         })}
       </div>
 
-      {/* GAVETA DE DETALHES DO DIA SELECIONADO */}
       {selectedDayInfo && (
         <div style={styles.detailCard}>
           <div style={styles.detailHeader}>
@@ -193,14 +195,12 @@ const styles = {
   weekdaysGrid: { display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', textAlign: 'center' },
   weekdayText: { fontSize: '9px', fontWeight: '700', color: '#A1A1AA', textTransform: 'uppercase' },
   daysGrid: { display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '3px' },
-  emptyCell: { minHeight: '40px' }, // Aumentado ligeiramente para os decimais caberem
+  emptyCell: { minHeight: '40px' },
   dayCell: { minHeight: '40px', borderRadius: '6px', borderStyle: 'solid', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '2px 0px', boxSizing: 'border-box', lineHeight: '1.2', overflow: 'hidden', transition: 'all 0.15s ease' },
   dayNumber: { fontSize: '8px', fontWeight: '700', opacity: 0.7 },
-  cellRevenue: { fontSize: '9px', fontWeight: '800', color: '#FFF', marginTop: '1px', whiteSpace: 'nowrap' }, // Mantido pequeno para caber "€ 15.50"
+  cellRevenue: { fontSize: '9px', fontWeight: '800', color: '#FFF', marginTop: '1px', whiteSpace: 'nowrap' },
   cellCount: { fontSize: '7.5px', color: '#D1D5DB', fontWeight: '600', opacity: 0.85 },
-  
-  // Estilos da Gaveta de Detalhes
-  detailCard: { backgroundColor: '#121214', border: '1px solid #E5A93C', borderRadius: '8px', padding: '10px', marginTop: '6px', display: 'flex', flexDirection: 'column', gap: '8px', animation: 'fadeIn 0.2s ease' },
+  detailCard: { backgroundColor: '#121214', border: '1px solid #E5A93C', borderRadius: '8px', padding: '10px', marginTop: '6px', display: 'flex', flexDirection: 'column', gap: '8px' },
   detailHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #2A2A36', paddingBottom: '6px' },
   detailDateText: { fontSize: '11px', color: '#A1A1AA', fontWeight: '600', textTransform: 'capitalize' },
   detailTotalText: { fontSize: '12px', color: '#10B981', fontWeight: '800' },

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { db } from '../services/db';
+import { db, dbApi } from '../services/db';
 import { Filter, Trash2, Edit2, ChevronLeft, ChevronRight, Calendar, Search, X, Check } from 'lucide-react';
 
 export function AppointmentList({ refreshTrigger, onDeleteSuccess, isNetView }) {
@@ -19,18 +19,26 @@ export function AppointmentList({ refreshTrigger, onDeleteSuccess, isNetView }) 
   const [availableServices, setAvailableServices] = useState([]);
 
   const lang = i18n.language?.slice(0, 2) || 'es';
-  const commissionPercent = Number(localStorage.getItem('barber_commission_percent')) || 100;
+  const rawCommission = Number(localStorage.getItem('barber_commission_percent'));
+  const commissionPercent = isNaN(rawCommission) ? 100 : rawCommission;
   const factor = isNetView ? (commissionPercent / 100) : 1;
 
   useEffect(() => {
     async function loadData() {
-      const activeServices = await db.services.toArray();
-      setAvailableServices(activeServices);
-      const list = await db.appointments.reverse().sortBy('date');
-      setAppointments(list);
-      const activeNames = activeServices.map(s => s.name);
-      const historicalNames = list.flatMap(item => item.service_name ? item.service_name.split(' + ') : []);
-      setFilterServiceOptions(Array.from(new Set([...activeNames, ...historicalNames])).filter(Boolean));
+      try {
+        const activeServices = await db.services.toArray();
+        setAvailableServices(activeServices);
+        
+        // Busca os atendimentos descriptografados pela dbApi
+        const list = await dbApi.getAppointments();
+        setAppointments(list);
+        
+        const activeNames = activeServices.map(s => s.name);
+        const historicalNames = list.flatMap(item => item.service_name ? item.service_name.split(' + ') : []);
+        setFilterServiceOptions(Array.from(new Set([...activeNames, ...historicalNames])).filter(Boolean));
+      } catch (err) {
+        console.error('Erro ao carregar lista de atendimentos:', err);
+      }
     }
     loadData();
   }, [refreshTrigger]);
@@ -41,15 +49,15 @@ export function AppointmentList({ refreshTrigger, onDeleteSuccess, isNetView }) 
     setEditNotes(item.notes || '');
 
     if (item.items && Array.isArray(item.items) && item.items.length > 0) {
-      setEditItems(item.items.map(i => ({ name: i.name, price: Number(i.price) || 0 })));
+      setEditItems(item.items.map(i => ({ name: i.name, price: isNaN(Number(i.price)) ? 0 : Number(i.price) })));
     } else {
-      setEditItems([{ name: item.service_name || 'Serviço', price: Number(item.price) || 0 }]);
+      setEditItems([{ name: item.service_name || 'Serviço', price: isNaN(Number(item.price)) ? 0 : Number(item.price) }]);
     }
   };
 
   const handleEditPriceChange = (index, val) => {
     const updated = [...editItems];
-    updated[index].price = Number(val);
+    updated[index].price = Number(val) || 0;
     setEditItems(updated);
   };
 
@@ -59,14 +67,15 @@ export function AppointmentList({ refreshTrigger, onDeleteSuccess, isNetView }) 
 
     let totalPrice = 0;
     const detailedItems = editItems.map(i => {
-      totalPrice += i.price;
-      return { name: i.name, price: i.price };
+      const p = Number(i.price) || 0;
+      totalPrice += p;
+      return { name: i.name, price: p };
     });
 
     const updatedServiceNames = detailedItems.map(i => i.name).join(' + ');
 
     try {
-      await db.appointments.update(editingAppointment.id, {
+      await dbApi.updateAppointment(editingAppointment.id, {
         date: new Date(editDate).toISOString(),
         service_name: updatedServiceNames,
         price: totalPrice,
@@ -75,10 +84,12 @@ export function AppointmentList({ refreshTrigger, onDeleteSuccess, isNetView }) 
       });
 
       setEditingAppointment(null);
-      const list = await db.appointments.reverse().sortBy('date');
+      const list = await dbApi.getAppointments();
       setAppointments(list);
       if (onDeleteSuccess) onDeleteSuccess();
-    } catch (err) { console.error('Erro ao atualizar atendimento:', err); }
+    } catch (err) { 
+      console.error('Erro ao atualizar atendimento:', err); 
+    }
   };
 
   const filteredAppointments = appointments.filter((item) => {
@@ -98,7 +109,10 @@ export function AppointmentList({ refreshTrigger, onDeleteSuccess, isNetView }) 
 
   const handleDelete = async (id) => {
     const confirmMsg = lang === 'pt' ? 'Deseja realmente excluir este atendimento?' : (lang === 'en' ? 'Are you sure you want to delete this appointment?' : '¿Realmente deseas eliminar esta cita?');
-    if (window.confirm(confirmMsg)) { await db.appointments.delete(id); if (onDeleteSuccess) onDeleteSuccess(); }
+    if (window.confirm(confirmMsg)) { 
+      await dbApi.deleteAppointment(id); 
+      if (onDeleteSuccess) onDeleteSuccess(); 
+    }
   };
 
   const getLocaleCode = () => { return lang === 'en' ? 'en-US' : (lang === 'pt' ? 'pt-BR' : 'es-ES'); };
@@ -141,12 +155,15 @@ export function AppointmentList({ refreshTrigger, onDeleteSuccess, isNetView }) 
         <div style={styles.list}>
           {paginatedAppointments.map((item) => {
             const formattedDate = new Date(item.date).toLocaleString(getLocaleCode(), { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+            const itemPriceNumber = isNaN(Number(item.price)) ? 0 : Number(item.price);
+            const calculatedPrice = itemPriceNumber * factor;
+            
             return (
               <div key={item.id} style={styles.listItem}>
                 <div style={styles.itemInfo}>
                   <div style={styles.itemHeader}>
-                    <span style={styles.serviceName}>{item.service_name}</span>
-                    <span style={styles.itemPrice}>€ {(Number(item.price) * factor).toFixed(2)}</span>
+                    <span style={styles.serviceName}>{item.service_name || 'Serviço'}</span>
+                    <span style={styles.itemPrice}>€ {calculatedPrice.toFixed(2)}</span>
                   </div>
                   <div style={styles.itemMeta}>
                     <span style={styles.dateText}>{formattedDate}</span>
@@ -254,7 +271,6 @@ const styles = {
   pageControls: { display: 'flex', alignItems: 'center', gap: '10px' },
   pageIndicator: { fontSize: '12px', color: '#FFF', fontWeight: '600' },
   pageBtn: { backgroundColor: '#2A2A36', color: '#FFF', border: 'none', borderRadius: '6px', padding: '4px 8px', display: 'flex', alignItems: 'center' },
-  
   modalOverlay: { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0, 0, 0, 0.75)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px', zIndex: 9999 },
   modalBody: { backgroundColor: '#1E1E26', borderRadius: '14px', border: '1px solid #2A2A36', width: '100%', maxWidth: '400px', padding: '16px' },
   modalHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' },

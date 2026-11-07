@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { db } from '../services/db';
+import { db, dbApi } from '../services/db';
 import { Scissors, User, Zap, Smile, Sparkles, Palette, Sun, Waves, Coins, Check, Clock, FileText, Tag, AlertTriangle } from 'lucide-react';
 
 const iconMap = { Scissors: Scissors, User: User, Zap: Zap, Smile: Smile, Sparkles: Sparkles, Palette: Palette, Sun: Sun, Waves: Waves, Coins: Coins };
@@ -107,24 +107,19 @@ export function HaircutForm({ onSaveSuccess }) {
     
     if (selectedIds.length === 0) return alert(t('form.select_at_least_one'));
 
-    // Monta o array detalhado de itens com ID, nome e preço individual
     const detailedItems = services
       .filter(s => selectedItems.hasOwnProperty(s.id))
-      .map(s => ({
-        serviceId: s.id,
-        name: s.name,
-        price: selectedItems[s.id]
-      }));
+      .map(s => ({ serviceId: s.id, name: s.name, price: selectedItems[s.id] }));
 
     const selectedNames = detailedItems.map(i => i.name).join(' + ');
     const newAppointmentDate = new Date(date);
 
     try {
-      await db.appointments.add({
+      await dbApi.addAppointment({
         date: newAppointmentDate.toISOString(),
         service_name: selectedNames,
         price: totalPrice,
-        items: detailedItems, // Salva o detalhamento estruturado
+        items: detailedItems,
         notes: notes,
       });
 
@@ -188,14 +183,14 @@ export function HaircutForm({ onSaveSuccess }) {
             <div style={styles.priceSlidersBox}>
               <span style={styles.sliderBoxTitle}>{t('form.adjust_price')}</span>
               {services.filter(s => selectedItems.hasOwnProperty(s.id)).map((service) => (
-                  <div key={service.id} style={styles.singleSliderRow}>
-                    <div style={styles.sliderHeader}>
-                      <span style={styles.sliderServiceName}>{service.name}</span>
-                      <span style={styles.sliderValueText}>€ {selectedItems[service.id]}</span>
-                    </div>
-                    <input type="range" min="0" max="120" step="1" value={selectedItems[service.id]} onChange={(e) => handlePriceChange(service.id, e.target.value)} style={styles.sliderInput} />
+                <div key={service.id} style={styles.singleSliderRow}>
+                  <div style={styles.sliderHeader}>
+                    <span style={styles.sliderServiceName}>{service.name}</span>
+                    <span style={styles.sliderValueText}>€ {selectedItems[service.id]}</span>
                   </div>
-                ))}
+                  <input type="range" min="0" max="120" step="1" value={selectedItems[service.id]} onChange={(e) => handlePriceChange(service.id, e.target.value)} style={styles.sliderInput} />
+                </div>
+              ))}
             </div>
           )}
 

@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { db } from '../services/db';
+import { db, dbApi } from '../services/db';
 import { Euro, Users, TrendingUp, RefreshCcw, Star, Target } from 'lucide-react';
 
 export function DashboardMetrics({ refreshTrigger, calendarDate, isNetView }) {
   const { t, i18n } = useTranslation();
   const [periodIndex, setPeriodIndex] = useState(2); 
-  const [topRightIndex, setTopRightIndex] = useState(1); 
-  const [bottomRightIndex, setBottomRightIndex] = useState(1); 
+  const [topRightIndex, setTopRightIndex] = useState(0); 
+  const [bottomRightIndex, setBottomRightIndex] = useState(0); 
   
   const [metrics, setMetrics] = useState({
     dynamicRevenue: 0, 
@@ -22,9 +22,11 @@ export function DashboardMetrics({ refreshTrigger, calendarDate, isNetView }) {
   useEffect(() => {
     async function calculateMetrics() {
       try {
-        const allAppointments = await db.appointments.toArray();
+        const allAppointments = await dbApi.getAppointments();
         const now = new Date();
-        const commissionPercent = Number(localStorage.getItem('barber_commission_percent')) || 100;
+        
+        const rawCommission = Number(localStorage.getItem('barber_commission_percent'));
+        const commissionPercent = isNaN(rawCommission) ? 100 : rawCommission;
         const factor = isNetView ? (commissionPercent / 100) : 1;
 
         const calYear = calendarDate.getFullYear();
@@ -56,7 +58,8 @@ export function DashboardMetrics({ refreshTrigger, calendarDate, isNetView }) {
 
         allAppointments.forEach(item => {
           const d = new Date(item.date);
-          const price = (Number(item.price) || 0) * factor;
+          const rawP = Number(item.price);
+          const price = (isNaN(rawP) ? 0 : rawP) * factor;
 
           allTimeRev += price;
           allTimeCuts += 1;
@@ -103,7 +106,7 @@ export function DashboardMetrics({ refreshTrigger, calendarDate, isNetView }) {
           avgTicketAll: allTimeCuts > 0 ? allTimeRev / allTimeCuts : 0
         });
 
-      } catch (err) { console.error('Erro:', err); }
+      } catch (err) { console.error('Erro métricas:', err); }
     }
     calculateMetrics();
   }, [refreshTrigger, calendarDate, periodIndex, isNetView]);
