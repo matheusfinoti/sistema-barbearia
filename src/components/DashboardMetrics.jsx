@@ -6,8 +6,8 @@ import { Euro, Users, TrendingUp, RefreshCcw, Star, Target } from 'lucide-react'
 export function DashboardMetrics({ refreshTrigger, calendarDate, isNetView }) {
   const { t, i18n } = useTranslation();
   const [periodIndex, setPeriodIndex] = useState(2); 
-  const [topRightIndex, setTopRightIndex] = useState(0); 
-  const [bottomRightIndex, setBottomRightIndex] = useState(0); 
+  const [topRightIndex, setTopRightIndex] = useState(1); 
+  const [bottomRightIndex, setBottomRightIndex] = useState(1); 
   
   const [metrics, setMetrics] = useState({
     dynamicRevenue: 0, 
@@ -140,17 +140,17 @@ export function DashboardMetrics({ refreshTrigger, calendarDate, isNetView }) {
       <div style={styles.mainCard} onClick={togglePeriod}>
         <div style={styles.mainCardHeader}>
           <span>{periodLabels[periodIndex]}</span>
-          <RefreshCcw size={14} color="#71717A" />
+          <RefreshCcw size={13} color="#71717A" />
         </div>
         <div style={styles.mainCardBody}>
           <div style={styles.halfCol}>
-            <Euro size={22} color="#10B981" style={styles.iconWrapper} />
+            <Euro size={18} color="#10B981" style={styles.iconWrapper} />
             <span style={styles.statLabel}>{labelRev}</span>
             <span style={styles.statValue}>€ {metrics.dynamicRevenue.toFixed(2)}</span>
           </div>
           <div style={styles.divider} />
           <div style={styles.halfCol}>
-            <Users size={22} color="#E5A93C" style={styles.iconWrapper} />
+            <Users size={18} color="#E5A93C" style={styles.iconWrapper} />
             <span style={styles.statLabel}>{labelSrv}</span>
             <span style={styles.statValue}>{metrics.dynamicCuts}</span>
           </div>
@@ -161,8 +161,8 @@ export function DashboardMetrics({ refreshTrigger, calendarDate, isNetView }) {
         <div style={styles.smallCard} onClick={toggleTopRight}>
           <div style={styles.smallCardHeader}>
             <span style={styles.smallCardTitle}>{trTitles[topRightIndex]}</span>
-            {topRightIndex === 0 && <Star size={14} color="#E5A93C" />}
-            {topRightIndex === 1 && <Target size={14} color="#10B981" />}
+            {topRightIndex === 0 && <Star size={13} color="#E5A93C" />}
+            {topRightIndex === 1 && <Target size={13} color="#10B981" />}
           </div>
           <div style={styles.smallCardValue}>
             {topRightIndex === 0 && (metrics.topServiceCount > 0 ? `${metrics.topServiceName} (${metrics.topServiceCount}x)` : '-')}
@@ -173,7 +173,7 @@ export function DashboardMetrics({ refreshTrigger, calendarDate, isNetView }) {
         <div style={styles.smallCard} onClick={toggleBottomRight}>
           <div style={styles.smallCardHeader}>
             <span style={styles.smallCardTitle}>{brTitles[bottomRightIndex]}</span>
-            <TrendingUp size={14} color="#A855F7" />
+            <TrendingUp size={13} color="#A855F7" />
           </div>
           <div style={styles.smallCardValue}>
             {bottomRightIndex === 0 && `€ ${metrics.avgTicketMonth.toFixed(2)}`}
@@ -186,18 +186,18 @@ export function DashboardMetrics({ refreshTrigger, calendarDate, isNetView }) {
 }
 
 const styles = {
-  grid: { display: 'grid', gridTemplateColumns: '1.25fr 1fr', gap: '10px', marginBottom: '12px', width: '100%', boxSizing: 'border-box' },
-  mainCard: { backgroundColor: '#1E1E26', borderRadius: '12px', border: '1px solid #2A2A36', padding: '14px', display: 'flex', flexDirection: 'column', cursor: 'pointer', userSelect: 'none', width: '100%', boxSizing: 'border-box', overflow: 'hidden' },
-  mainCardHeader: { fontSize: '13px', color: '#A1A1AA', fontWeight: '500', marginBottom: '14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
+  grid: { display: 'grid', gridTemplateColumns: '1.25fr 1fr', gap: '8px', marginBottom: '12px', width: '100%', boxSizing: 'border-box' },
+  mainCard: { backgroundColor: '#1E1E26', borderRadius: '12px', border: '1px solid #2A2A36', padding: '10px 8px', display: 'flex', flexDirection: 'column', cursor: 'pointer', userSelect: 'none', width: '100%', boxSizing: 'border-box', overflow: 'hidden' },
+  mainCardHeader: { fontSize: '12px', color: '#A1A1AA', fontWeight: '500', marginBottom: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 2px' },
   mainCardBody: { display: 'flex', flex: 1, alignItems: 'center', justifyContent: 'space-between', width: '100%' },
-  halfCol: { width: '48%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '4px', overflow: 'hidden' },
-  divider: { width: '1px', height: '60px', backgroundColor: '#2A2A36', margin: '0 4px' },
-  iconWrapper: { marginBottom: '4px' },
-  statLabel: { fontSize: '11px', color: '#A1A1AA' },
-  statValue: { fontSize: '15px', fontWeight: '800', color: '#FFF', width: '100%', textAlign: 'center', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' },
-  rightStack: { display: 'flex', flexDirection: 'column', gap: '10px', width: '100%', boxSizing: 'border-box' },
-  smallCard: { backgroundColor: '#1E1E26', padding: '12px', borderRadius: '12px', border: '1px solid #2A2A36', display: 'flex', flex: 1, flexDirection: 'column', justifyContent: 'center', gap: '6px', width: '100%', boxSizing: 'border-box', cursor: 'pointer', userSelect: 'none' },
+  halfCol: { width: '48%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '2px', overflow: 'hidden' },
+  divider: { width: '1px', height: '45px', backgroundColor: '#2A2A36', margin: '0 2px' },
+  iconWrapper: { marginBottom: '2px' },
+  statLabel: { fontSize: '10px', color: '#A1A1AA' },
+  statValue: { fontSize: '13px', fontWeight: '800', color: '#FFF', width: '100%', textAlign: 'center', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'clip' },
+  rightStack: { display: 'flex', flexDirection: 'column', gap: '8px', width: '100%', boxSizing: 'border-box' },
+  smallCard: { backgroundColor: '#1E1E26', padding: '10px 8px', borderRadius: '12px', border: '1px solid #2A2A36', display: 'flex', flex: 1, flexDirection: 'column', justifyContent: 'center', gap: '4px', width: '100%', boxSizing: 'border-box', cursor: 'pointer', userSelect: 'none' },
   smallCardHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
-  smallCardTitle: { fontSize: '11px', color: '#A1A1AA', fontWeight: '500', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', paddingRight: '4px' },
-  smallCardValue: { fontSize: '15px', fontWeight: '800', color: '#FFF', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' },
+  smallCardTitle: { fontSize: '10px', color: '#A1A1AA', fontWeight: '500', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', paddingRight: '2px' },
+  smallCardValue: { fontSize: '13px', fontWeight: '800', color: '#FFF', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' },
 };
