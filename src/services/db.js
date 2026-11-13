@@ -1,7 +1,12 @@
 import Dexie from 'dexie';
-import { encryptObj, decryptObj, isUnlocked } from './crypto';
+import { encryptObj, decryptObj, decryptWithLegacyKeys, isUnlocked } from './crypto';
 
 export const db = new Dexie('BarbeariaLocalDB');
+
+db.version(1).stores({
+  services: '++id, name, price, icon_name, is_active',
+  appointments: '++id, date, service_name, price, items, notes'
+});
 
 db.version(2).stores({
   services: '++id, name, price, icon_name, is_active',
@@ -17,12 +22,32 @@ export const dbApi = {
 
         if (item.encryptedData) {
           decData = await decryptObj(item.encryptedData);
-          // Caso tenha ocorrido duplo encapsulamento em backup anterior
+
           if (decData && decData.encryptedData && !decData.service_name) {
             decData = await decryptObj(decData.encryptedData);
           }
+
+          // Se falhou com o PIN atual, resgata usando a chave antiga do navegador e migra para o PIN atual
+          if (!decData) {
+            decData = await decryptWithLegacyKeys(item.encryptedData);
+            if (decData && isUnlocked()) {
+              const reEncrypted = await encryptObj({
+                service_name: decData.service_name || 'Serviço',
+                price: Number(decData.price) || 0,
+                items: Array.isArray(decData.items) ? decData.items : [],
+                notes: decData.notes || ''
+              });
+              if (reEncrypted) {
+                await db.appointments.put({
+                  id: item.id,
+                  date: item.date || new Date().toISOString(),
+                  encryptedData: reEncrypted
+                });
+              }
+            }
+          }
         } else if (item.service_name !== undefined || item.price !== undefined) {
-          // Registro legado ainda em texto claro: lê os dados e migra para criptografado
+          // Registro antigo em texto puro: lê e migra para o PIN atual
           decData = {
             service_name: item.service_name,
             price: item.price,

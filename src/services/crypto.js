@@ -1,6 +1,7 @@
 const ALGORITHM = 'AES-GCM';
 const SALT_KEY = 'barbearia_crypto_salt';
 const WRAPPED_KEY = 'barbearia_wrapped_key';
+const LEGACY_KEYS = ['barbearia_device_key', 'barbearia_crypto_key'];
 
 let sessionKey = null;
 
@@ -86,7 +87,6 @@ export async function unlockWithPassword(password) {
     sessionKey = await window.crypto.subtle.importKey('jwk', jwk, { name: ALGORITHM }, true, ['encrypt', 'decrypt']);
     return true;
   } catch (e) {
-    console.error("Senha incorreta.");
     return false;
   }
 }
@@ -95,7 +95,7 @@ export async function changeMasterPassword(currentPassword, newPassword) {
   const saltB64 = localStorage.getItem(SALT_KEY);
   const wrappedStr = localStorage.getItem(WRAPPED_KEY);
   if (!saltB64 || !wrappedStr) {
-    throw new Error("Configuração de senha não encontrada.");
+    throw new Error('Configuração de senha não encontrada.');
   }
 
   let dekString;
@@ -110,7 +110,7 @@ export async function changeMasterPassword(currentPassword, newPassword) {
     const decryptedDEKBuffer = await window.crypto.subtle.decrypt({ name: ALGORITHM, iv: oldIv }, oldKek, oldCipher);
     dekString = new TextDecoder().decode(decryptedDEKBuffer);
   } catch (e) {
-    throw new Error("Senha atual incorreta.");
+    throw new Error('Senha atual incorreta.');
   }
 
   const newSalt = window.crypto.getRandomValues(new Uint8Array(16));
@@ -138,10 +138,37 @@ export async function encryptObj(obj) {
 
 export async function decryptObj(encryptedObj) {
   if (!encryptedObj || !encryptedObj.iv || !encryptedObj.data || !sessionKey) return null;
+  try {
+    const iv = base64ToBuffer(encryptedObj.iv);
+    const data = base64ToBuffer(encryptedObj.data);
+    const decryptedBuffer = await window.crypto.subtle.decrypt({ name: ALGORITHM, iv }, sessionKey, data);
+    return JSON.parse(new TextDecoder().decode(decryptedBuffer));
+  } catch (e) {
+    return null;
+  }
+}
+
+// Tenta descriptografar registros antigos salvos antes do sistema de PIN
+export async function decryptWithLegacyKeys(encryptedObj) {
+  if (!encryptedObj || !encryptedObj.iv || !encryptedObj.data) return null;
   const iv = base64ToBuffer(encryptedObj.iv);
   const data = base64ToBuffer(encryptedObj.data);
-  const decryptedBuffer = await window.crypto.subtle.decrypt({ name: ALGORITHM, iv }, sessionKey, data);
-  return JSON.parse(new TextDecoder().decode(decryptedBuffer));
+
+  for (const storageKey of LEGACY_KEYS) {
+    const rawJwk = localStorage.getItem(storageKey);
+    if (!rawJwk) continue;
+    try {
+      const jwk = JSON.parse(rawJwk);
+      const legacyKey = await window.crypto.subtle.importKey(
+        'jwk', jwk, { name: ALGORITHM }, false, ['decrypt']
+      );
+      const decryptedBuffer = await window.crypto.subtle.decrypt({ name: ALGORITHM, iv }, legacyKey, data);
+      return JSON.parse(new TextDecoder().decode(decryptedBuffer));
+    } catch (e) {
+      // Tenta a próxima chave legada
+    }
+  }
+  return null;
 }
 
 export async function encryptDataWithPassword(password, dataObj) {
