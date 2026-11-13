@@ -152,4 +152,4 @@ const styles = {
   navBar: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px', marginBottom: '16px' },
   tabBtn: { padding: '12px 0', border: 'none', borderRadius: '10px', fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontWeight: '700' },
   mainContent: { display: 'flex', flexDirection: 'column', width: '100%' },
-};
+}; 
